@@ -36,12 +36,13 @@ The project follows a **classic Geant4 layout** separating headers, implementati
 muSR_spectrometer/
 ├─ CMakeLists.txt
 ├─ README.md
-├─ macros/
-├─ include/
-├─ src/
-├─ app/
-├─ analysis/
-└─ build/
+├─ macros/         # Geant4 macros for visulaization and running
+├─ include/        # header files
+├─ src/            # source files
+├─ app/            # main.cc file
+├─ analysis/       # analysis scripts
+├─ Doc/            # documentation and figures
+└─ build/          # ignored by git
 ```
 
 ### Important directories
@@ -73,19 +74,13 @@ The simulated detector consists of:
 -   a **target sample** located at the origin
 -   two stacks of **silicon tracking planes**
 
-```
-   upstream planes
-        ||
-        ||
-        \/ 
-   ---- detector ----
-        sample
-   ---- detector ----
-        /\
-        ||
-        ||
-   downstream planes
-```
+
+
+<img src="./Doc/spectrometer.png" alt="Spectrometer" style="zoom:100%;" />
+
+<img src="./Doc/reconstruction.png" alt="Reconstruction" style="zoom:100%;" />
+
+Figures taken from [Mandok et al. (2025) [arXiv:2503.08891]](https://arxiv.org/abs/2503.08891).
 
 Tracking planes are modeled as **thin silicon slabs**.
 
