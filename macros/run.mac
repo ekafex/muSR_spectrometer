@@ -1,0 +1,32 @@
+
+#/run/numberOfThreads 2
+
+# reduce output in MT
+#/control/cout/ignoreThreadsExcept 0
+
+
+/control/verbose 0
+/run/verbose 0
+/event/verbose 0
+/tracking/verbose 0
+/run/printProgress 0
+
+# initialize
+/run/initialize
+
+######################################
+# open analysis file
+/analysis/openFile gamma_1MeV.root
+#------------------------------------
+#/control/alias defaultFileType csv
+#/analysis/openFile gamma_1MeV.csv
+######################################
+/analysis/setActivation true
+
+
+/run/beamOn 1000
+
+
+#/analysis/write
+#/analysis/closeFile
+
