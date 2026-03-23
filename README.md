@@ -64,6 +64,37 @@ Python scripts used for reconstruction and plotting.
 
 
 
+# Compile & Run the Code
+
+
+
+First clone the repository as normal. Go first to your desired folder and then clone like so:
+
+```bash
+git clone https://github.com/ekafex/muSR_spectrometer.git
+# then
+cd muSR_spectrometer
+# create build folder
+mkdir build
+cd build
+```
+
+Now compile the code (inside `build` folder do):
+
+```bash
+cmake ..
+# then
+make -j4
+```
+
+To run the code
+
+```bash
+./g4_vr_musr
+```
+
+
+
 # Detector Model
 
 ### Geometry
