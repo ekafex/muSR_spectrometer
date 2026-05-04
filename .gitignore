@@ -1,3 +1,6 @@
+## Ignore ROOT files
+*.root
+
 # Build directories
 build/
 cmake-build-*/
