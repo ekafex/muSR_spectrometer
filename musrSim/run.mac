@@ -226,7 +226,9 @@
 /gun/direction 0 0 1
 
 # Surface muon kinetic energy.
-/gun/energy 4.1 MeV
+#/gun/energy 4.1 MeV
+# Surface muon momentum
+/gun/momentum 28.0 MeV
 
 # Initial muon spin perpendicular to beam.
 /gun/polarization 1 0 0
