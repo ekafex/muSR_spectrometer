@@ -8,8 +8,8 @@ Generate musrSim template
 """
 
 def Header():
-    return """
-This macro is generated via Gen_Macro.py!
+    return """############################################################
+# This macro is generated via Gen_Macro.py!
 ############################################################
 # Goal:
 #   Approximate simulation of the Si-pixel vx-muSR spectrometer 
@@ -139,9 +139,9 @@ def Primary_Beam():
 /gun/direction 0 0 1
 
 # Surface muon kinetic energy.
-#/gun/energy 4.1 MeV
+/gun/kenergy 4.1 MeV
 # Surface muon momentum
-/gun/momentum 28.0 MeV
+#/gun/momentum 29.72 MeV
 
 # Initial muon spin perpendicular to beam.
 /gun/polarization 1 0 0
@@ -193,6 +193,13 @@ def ROOT_Output(Det : dict, onlyStoreEventsWithHits : bool = False):
 
     """
     s2 = f"""
+############################################################
+# OUTPUT SETTINGS
+############################################################
+
+/musr/command rootOutputDirectoryName data
+/musr/command storeOnlyEventsWithHits true
+
 # If using store-only filters, apply to all Si layers.
 # Uncomment only after confirming detector IDs in your output.
 /musr/onlyStoreEventsWithHits {ID_L['L1']}
@@ -202,7 +209,7 @@ def ROOT_Output(Det : dict, onlyStoreEventsWithHits : bool = False):
 
     """
     if onlyStoreEventsWithHits:
-        s = s1+s2
+        s = s2
     else:
         s = s1
     return s
@@ -256,7 +263,7 @@ def Visual(Det, vis_enable : bool = False):
 
     if vis_enable:
         # Write vis.mac file
-        with open('vis.mac') as f:
+        with open('vis.mac','w') as f:
             f.write(s)
         s = """
 
@@ -278,14 +285,14 @@ def Visual(Det, vis_enable : bool = False):
 # ==============================
 
 
-def run(Nrun : int = 100000, printFreq:int=10000):
+def run(N_events : int = 100000, printFreq:int=10000):
     """
     Define Beam Run parameters.
 
     Parameters
     ----------
-    Nrun : int, optional
-        Number of runs. The default is 100000.
+    N_events: int, optional
+        Number of events. The default is 100000.
     printFreq : int, optional
         Printing run statistics with printFreq frequency. The default is 10000.
 
@@ -305,7 +312,7 @@ def run(Nrun : int = 100000, printFreq:int=10000):
 
 # Production: /run/beamOn 10M
 # Start with 100k for debugging
-/run/beamOn {Nrun}
+/run/beamOn {N_events}
 
     """
 
@@ -358,10 +365,17 @@ def Detector(Det : dict):
     z_L3 = Det['z_offset'] +Dist['L2-L3']/2                # mm z of Layer L3
     z_L4 = Det['z_offset'] +Dist['L3-L4'] +Dist['L2-L3']/2 # mm z of Layer L4
     # ---------------------------
-    z_P1 = z_L1 + (Dim['h'] + Foil['h_foil'])/2 # mm z of L1 polyimide foil
-    z_P2 = z_L2 + (Dim['h'] + Foil['h_foil'])/2 # mm z of L2 polyimide foil
-    z_P3 = z_L3 + (Dim['h'] + Foil['h_foil'])/2 # mm z of L3 polyimide foil
-    z_P4 = z_L4 + (Dim['h'] + Foil['h_foil'])/2 # mm z of L4 polyimide foil
+    ################################################
+    # option A: all foils geometrically on +z side
+    # option B: foils away from sample
+    # option C: foils behind chip relative to local detector orientation
+    ################################################
+    # I am choosing Foils away from Sample like Fig.1 Mandok et al(2026)
+    # upstream face the beam, downstream away from beam.´
+    z_P1 = z_L1 - (Dim['h'] + Foil['h_foil'])/2 # mm z of L1 polyimide foil (upstream)
+    z_P2 = z_L2 - (Dim['h'] + Foil['h_foil'])/2 # mm z of L2 polyimide foil (upstream)
+    z_P3 = z_L3 + (Dim['h'] + Foil['h_foil'])/2 # mm z of L3 polyimide foil (downstream)
+    z_P4 = z_L4 + (Dim['h'] + Foil['h_foil'])/2 # mm z of L4 polyimide foil (downstream)
     # ---------------------------
     
     s = f"""
@@ -381,7 +395,9 @@ def Detector(Det : dict):
 #   L2 z = {z_L2:.1f} mm
 #   L3 z = +{z_L3:.1f} mm
 #   L4 z = +{z_L4} mm
-#
+# 
+# Mandok et al. (2026) does not describe the position of foils
+# From Fig.1 I belive the Polyimide foils are away from Target  
 
 # Layer 1:
 /musr/command construct box {L_Name['L1']} {Dim['l']/2} {Dim['w']/2} {Dim['h']/2} {Det['Material']} 0 0 {z_L1} log_World norot musr/ScintSD {ID_L['L1']}
@@ -496,7 +512,7 @@ def Magnets(Magnet : dict):
 # ---------------------
 # ---------------------
 
-N_run = 100000 # Production: /run/beamOn 10M
+N_events = 100000 # Production: /run/beamOn 10M
 
 onlyStoreEventsWithHits = False # If using store-only filters, apply to all Si layers.
 vis_enable = False              # Disable visualization for production.
@@ -504,7 +520,7 @@ vis_enable = False              # Disable visualization for production.
 
 World  = {'l':500,'w':500,'h':750,'Material':'Air'}            # World dimensions and material
 
-Detect = {'ID':{'L1':100, 'L2':101, 'L3':103, 'L4':104},       # Layers IDs
+Detect = {'ID':{'L1':101, 'L2':102, 'L3':103, 'L4':104},       # Layers IDs
           'Names':{'L1':'L1_Chip', 'L2':'L2_Chip', 
                    'L3':'L3_Chip', 'L4':'L4_Chip'},            # Name of each layer (construct name)
           'Dimensions': {'l':40., 'w':40., 'h':0.1},           # full dimensions of 2x2 MuPix11 chips/layer
@@ -531,8 +547,14 @@ Magnet={'l':10.,'w':2.,'h':10.,'x':0.,'y':15.,'z':0.,          # Permanent magne
 # ===============================================================
 
 
-if Targ['diameter']>= 2*Magnet['y']:
-    raise ValueError("Target Diameter is Overlaping with Permanent Magnets!!!")
+if Detect['Distances']['L1-L2'] <= Detect['Dimensions']['h']:
+    raise ValueError("L1-L2 distance too small: detector layers may overlap.")
+
+if Detect['Distances']['L2-L3'] <= Targ['thickness']:
+    raise ValueError("Target may overlap with inner detector layers.")
+
+if Targ['diameter'] / 2 >= abs(Magnet['y']) - Magnet['w'] / 2:
+    raise ValueError("Target overlaps magnet inner faces.")
 
 
 
@@ -546,7 +568,7 @@ ss += Limits_Cuts()
 ss += Primary_Beam()
 ss += ROOT_Output(Detect, onlyStoreEventsWithHits)
 ss += Visual(Detect, vis_enable)
-ss += run(N_run, printFreq=10000)
+ss += run(N_events, printFreq=10000)
 
 
 with open('my_run.mac','w') as f:

@@ -1,5 +1,5 @@
 
-This macro is generated via Gen_Macro.py!
+# This macro is generated via Gen_Macro.py!
 ############################################################
 # Goal:
 #   Approximate simulation of the Si-pixel vx-muSR spectrometer 
@@ -106,7 +106,7 @@ This macro is generated via Gen_Macro.py!
 /musr/command construct box Magnet_Top    5.0 1.0 5.0 G4_Fe 0.0 15.0  0.0 log_World norot dead -1
 /musr/command construct box Magnet_Bottom 5.0 1.0 5.0 G4_Fe 0.0 -15.0 0.0 log_World norot dead -1
 
-/musr/command globalField Magnets 15.0 15.0 15.0 uniform 0.0 0 0.0 log_Target 0 0.0063 0 0 0 0
+#/musr/command globalField Magnets 15.0 15.0 15.0 uniform 0.0 0 0.0 log_Target 0 0.0063 0 0 0 0
 
     
 ############################################################
@@ -215,6 +215,6 @@ This macro is generated via Gen_Macro.py!
 
 # Production: /run/beamOn 10M
 # Start with 100k for debugging
-/run/beamOn 100000
+/run/beamOn 1000
 
     
