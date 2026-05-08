@@ -72,7 +72,7 @@
 #
 
 # Layer 1: z = -30 mm & 25 um polyimide/Kapton foil, placed just downstream of Si layer.
-/musr/command construct box L1_Chip 20.0 20.0 0.05 G4_Si 0 0 -30 log_World norot musr/ScintSD 101
+/musr/command construct box L1_Chip 20.0 20.0 0.05 G4_Si 0 -0 -30 log_World norot musr/ScintSD 101
 /musr/command construct box L1_PolyimideFoil 20.0 20.0 0.0125 G4_KAPTON 0 0 -29.9375 log_World norot dead -1
 
 # Layer 2: z = -10 mm & 25 um polyimide/Kapton foil, placed just downstream of Si layer.
