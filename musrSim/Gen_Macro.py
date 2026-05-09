@@ -24,7 +24,7 @@ def Header():
 #
 # Detector:
 # In the paper Si-pixel chip of one detector is a quad-module of 4 MuPix11 chips.
-# Here we approximate as one single modulewith:
+# Here we approximate as one single module with:
 #   - Si thickness: 100 um
 #   - Polyimide foil: 25 um
 #   - Polyimide/Kapton is represented using G4_KAPTON
@@ -48,16 +48,14 @@ def Header():
 # Uniform transverse field of about 6.3 mT around the sample.
 #
 ############################################################
-
     """
 
 # ==============================
 
 def Initialization():
     return """
-
 ############################################################
-# 0. GENERAL INITIALIZATION
+# GENERAL INITIALIZATION
 ############################################################
 
 /control/verbose 0
@@ -140,13 +138,13 @@ def Primary_Beam():
 
 # Surface muon kinetic energy.
 /gun/kenergy 4.1 MeV
-# Surface muon momentum
-#/gun/momentum 29.72 MeV
 
 # Initial muon spin perpendicular to beam.
 /gun/polarization 1 0 0
 /gun/muonPolarizFraction 1.0
 
+    """
+    
 # Pointlike beam: closest to paper Sec. III simulation.
 # No vertex smearing command needed if position is fixed.
 
@@ -160,13 +158,11 @@ def Primary_Beam():
 # Use only if your musrSim primary generator supports this command.
 #/gun/meanarrivaltime 25 microsecond
 
-    """
-
 # ==============================
 
 def ROOT_Output(Det : dict, onlyStoreEventsWithHits : bool = False):
     """
-    Controlls the Output of the ROOT file tree and data that are saved.
+    Controls the Output of the ROOT file tree and data that are saved.
 
     Parameters
     ----------
@@ -182,36 +178,27 @@ def ROOT_Output(Det : dict, onlyStoreEventsWithHits : bool = False):
     """
     
     ID_L = Det['ID']
+    flag = "true" if onlyStoreEventsWithHits else "false"
     
-    s1 = """
+    s = f"""
 ############################################################
 # OUTPUT SETTINGS
 ############################################################
 
 /musr/command rootOutputDirectoryName data
-/musr/command storeOnlyEventsWithHits false
+/musr/command storeOnlyEventsWithHits {flag}
 
     """
-    s2 = f"""
-############################################################
-# OUTPUT SETTINGS
-############################################################
-
-/musr/command rootOutputDirectoryName data
-/musr/command storeOnlyEventsWithHits true
-
+    
+    if onlyStoreEventsWithHits:
+        s += f"""
 # If using store-only filters, apply to all Si layers.
-# Uncomment only after confirming detector IDs in your output.
 /musr/onlyStoreEventsWithHits {ID_L['L1']}
 /musr/onlyStoreEventsWithHits {ID_L['L2']}
 /musr/onlyStoreEventsWithHits {ID_L['L3']}
 /musr/onlyStoreEventsWithHits {ID_L['L4']}
 
     """
-    if onlyStoreEventsWithHits:
-        s = s2
-    else:
-        s = s1
     return s
 
 # ==============================
@@ -219,28 +206,7 @@ def ROOT_Output(Det : dict, onlyStoreEventsWithHits : bool = False):
 def Visual(Det, vis_enable : bool = False):
     L_Name = Det['Names']
     F_Name = Det['Foil']['Names']
-    s = f"""
-############################################################
-# VISUALIZATION ATTRIBUTES
-############################################################
-
-/musr/command visattributes log_World invisible
-
-/musr/command visattributes log_Target red
-
-/musr/command visattributes log_{L_Name['L1']} yellow
-/musr/command visattributes log_{L_Name['L2']} yellow
-/musr/command visattributes log_{L_Name['L3']} cyan
-/musr/command visattributes log_{L_Name['L4']} cyan
-
-/musr/command visattributes log_{F_Name['L1']} green
-/musr/command visattributes log_{F_Name['L2']} green
-/musr/command visattributes log_{F_Name['L3']} green
-/musr/command visattributes log_{F_Name['L4']} green
-
-############################################################
-
-/vis/open OGLIX 1000x800-0+0
+    s = """/vis/open OGLIX 1000x800-0+0
 /vis/drawVolume
 #/vis/viewer/set/style wireframe 
 /vis/viewer/set/style surface
@@ -265,19 +231,37 @@ def Visual(Det, vis_enable : bool = False):
         # Write vis.mac file
         with open('vis.mac','w') as f:
             f.write(s)
-        s = """
+        s = f"""
+############################################################
+# VISUALIZATION ATTRIBUTES
+############################################################
+
+/musr/command visattributes log_World invisible
+
+/musr/command visattributes log_Target red
+
+/musr/command visattributes log_Magnet_Top blue
+/musr/command visattributes log_Magnet_Bottom blue
+
+/musr/command visattributes log_{L_Name['L1']} yellow
+/musr/command visattributes log_{L_Name['L2']} yellow
+/musr/command visattributes log_{L_Name['L3']} cyan
+/musr/command visattributes log_{L_Name['L4']} cyan
+
+/musr/command visattributes log_{F_Name['L1']} green
+/musr/command visattributes log_{F_Name['L2']} green
+/musr/command visattributes log_{F_Name['L3']} green
+/musr/command visattributes log_{F_Name['L4']} green
+
 
 # Disable visualization for production.
-#/vis/disable
 /control/execute vis.mac
 
         """
     else:
         s = """
-
 # Disable visualization for production.
 /vis/disable
-
 
         """
     return s
@@ -314,7 +298,7 @@ def run(N_events : int = 100000, printFreq:int=10000):
 # Start with 100k for debugging
 /run/beamOn {N_events}
 
-    """
+"""
 
 # ==============================
 
@@ -371,7 +355,7 @@ def Detector(Det : dict):
     # option C: foils behind chip relative to local detector orientation
     ################################################
     # I am choosing Foils away from Sample like Fig.1 Mandok et al(2026)
-    # upstream face the beam, downstream away from beam.´
+    # upstream face the beam, downstream away from beam.
     z_P1 = z_L1 - (Dim['h'] + Foil['h_foil'])/2 # mm z of L1 polyimide foil (upstream)
     z_P2 = z_L2 - (Dim['h'] + Foil['h_foil'])/2 # mm z of L2 polyimide foil (upstream)
     z_P3 = z_L3 + (Dim['h'] + Foil['h_foil'])/2 # mm z of L3 polyimide foil (downstream)
@@ -422,12 +406,12 @@ def Detector(Det : dict):
  
 def Target(Targ : dict):
     """
-    Target description (cyllindrical geometry).
+    Target description (cylindrical geometry).
 
     Parameters
     ----------
-    Targ['diameter'] : float, diameter of the cyllinder.
-    Targ['thickness'] : float, height of the cyllinder.
+    Targ['diameter'] : float, diameter of the cylinder.
+    Targ['thickness'] : float, height of the cylinder.
     Targ['Material'] : str, musrSim defined material.
     Targ['z'] : float, in case one need to offset target/sample from z=0.
 
@@ -443,6 +427,7 @@ def Target(Targ : dict):
 ############################################################
 
 /musr/command construct tubs Target 0 {Targ['diameter']/2} {Targ['thickness']/2} 0 360 {Targ['Material']} 0 0 {Targ['z']} log_World norot dead 10
+
     """
     return s
 
@@ -453,7 +438,7 @@ Magnet={'l':10.,'w':2.,'h':10.,'x':0.,'y':15.,'z':0.,          # Permanent magne
 
 def Magnets(Magnet : dict):
     """
-    Magnetif field definition from permanent magnets (assume uniform).
+    Magnetic field definition from permanent magnets (assume uniform).
 
     Parameters
     ----------
@@ -464,7 +449,7 @@ def Magnets(Magnet : dict):
     Magnet['y'] : float, position in y.
     Magnet['z'] : float, position in z.
     Magnet['Material'] : str, permanent magnet material as defined in musrSim.
-    Magnet['B_field'] : list, magnetic filed vector [Bx,By,Bz] in Tesla.
+    Magnet['B_field'] : list, magnetic field vector [Bx,By,Bz] in Tesla.
 
     Returns
     -------
@@ -472,6 +457,7 @@ def Magnets(Magnet : dict):
     """
     
     Bx, By, Bz = Magnet['B_field']
+    box        = Magnet['field_box']
       
     s = f"""
 ############################################################
@@ -481,10 +467,96 @@ def Magnets(Magnet : dict):
 /musr/command construct box Magnet_Top    {Magnet['l']/2} {Magnet['w']/2} {Magnet['h']/2} {Magnet['Material']} {Magnet['x']} {Magnet['y']}  {Magnet['z']} log_World norot dead -1
 /musr/command construct box Magnet_Bottom {Magnet['l']/2} {Magnet['w']/2} {Magnet['h']/2} {Magnet['Material']} {Magnet['x']} {-Magnet['y']} {Magnet['z']} log_World norot dead -1
 
-/musr/command globalField Magnets {Magnet['y']} {Magnet['y']} {Magnet['y']} uniform {Magnet['x']} 0 {Magnet['z']} log_Target {Bx} {By} {Bz} 0 0 0
+/musr/command globalfield Magnets {box['l']/2} {box['w']/2} {box['h']/2} uniform {Magnet['x']} 0 {Magnet['z']} log_Target {Bx} {By} {Bz} 0 0 0
+
+/musr/command globalfield printFieldValueAtPoint 0 0 0
+/musr/command globalfield printFieldValueAtPoint 0 0 14
+/musr/command globalfield printFieldValueAtPoint 0 0 16
+/musr/command globalfield printparameters
 
     """
     return s
+
+# ===============================================================
+
+
+def Geometry_Sanity_Check(Detect:dict, Targ:dict, Magnet:dict):
+    # ===============================================================
+    # Geometry sanity checks
+    # ===============================================================
+    
+    # --- Basic detector/material dimensions ---
+    chip_h = Detect['Dimensions']['h']          # full Si chip thickness [mm]
+    foil_h = Detect['Foil']['h_foil']           # full foil thickness [mm]
+    target_h = Targ['thickness']                # full target thickness [mm]
+    target_r = Targ['diameter'] / 2             # target radius [mm]
+    
+    # --- Layer spacings ---
+    d12 = Detect['Distances']['L1-L2']
+    d23 = Detect['Distances']['L2-L3']
+    d34 = Detect['Distances']['L3-L4']
+    
+    # --- Magnet clearance ---
+    magnet_y = abs(Magnet['y'])                 # magnet centre distance from beam axis [mm]
+    magnet_half_w = Magnet['w'] / 2             # magnet half-width in y [mm]
+    magnet_inner_face_y = magnet_y - magnet_half_w
+    
+    
+    # ===============================================================
+    # 1. Check neighbouring detector-layer overlaps
+    # ===============================================================
+    # Each neighbouring pair must have enough centre-to-centre spacing
+    # to contain one chip plus one foil clearance, since the foil is attached
+    # outside the chip.
+    
+    min_layer_spacing = chip_h + foil_h
+    
+    if d12 <= min_layer_spacing:
+        raise ValueError(
+            f"L1-L2 distance too small: d12={d12} mm, "
+            f"minimum required > {min_layer_spacing} mm."
+        )
+    
+    if d34 <= min_layer_spacing:
+        raise ValueError(
+            f"L3-L4 distance too small: d34={d34} mm, "
+            f"minimum required > {min_layer_spacing} mm."
+        )
+    
+    
+    # ===============================================================
+    # 2. Check target clearance between inner detector layers L2 and L3
+    # ===============================================================
+    # L2 and L3 are separated by d23, centered around the target.
+    # The target must fit between the inner silicon faces.
+    # Since your foils are placed away from the target, they are not included
+    # in this inner-clearance condition.
+    
+    inner_half_gap = d23 / 2
+    target_half_h = target_h / 2
+    chip_half_h = chip_h / 2
+    
+    available_clearance_to_inner_chip_face = inner_half_gap - chip_half_h
+    
+    if target_half_h >= available_clearance_to_inner_chip_face:
+        raise ValueError(
+            f"Target overlaps inner detector layers: target half-thickness={target_half_h} mm, "
+            f"available clearance={available_clearance_to_inner_chip_face} mm."
+        )
+    
+    
+    # ===============================================================
+    # 3. Check target radial clearance between permanent magnets
+    # ===============================================================
+    # Magnet inner face is at |y_magnet| - magnet_width/2.
+    # Target radius must be smaller than this.
+    
+    if target_r >= magnet_inner_face_y:
+        raise ValueError(
+            f"Target overlaps magnet inner faces: target radius={target_r} mm, "
+            f"magnet inner face at y={magnet_inner_face_y} mm."
+        )
+
 
 
 # === === === === === === === === === === === === === === ===
@@ -512,7 +584,7 @@ def Magnets(Magnet : dict):
 # ---------------------
 # ---------------------
 
-N_events = 100000 # Production: /run/beamOn 10M
+N_events = int(1e5) # Production: /run/beamOn 10M
 
 onlyStoreEventsWithHits = False # If using store-only filters, apply to all Si layers.
 vis_enable = False              # Disable visualization for production.
@@ -541,21 +613,17 @@ Targ= {'diameter':20.,'thickness':1.0,                         # Target/Sample d
        'Material':'G4_Al','z':0.}                              # Target/Sample material and offset from z=0 center
 
 Magnet={'l':10.,'w':2.,'h':10.,'x':0.,'y':15.,'z':0.,          # Permanent magnet dimensions and position
-        'Material':'G4_Fe', 'B_field':[0, 6.3e-3, 0]}          # Permanent magnet material and magnetic field vector
-
+        'Material':'G4_Fe',                                    # Permanent magnet material
+        'B_field':[0, 6.3e-3, 0],                              # Permanent magnet magnetic field vector
+        'field_box':{'l':30.,'w':30.,'h':30.}                  # Permanent magnet field box distribution
+        }
 
 # ===============================================================
 
 
-if Detect['Distances']['L1-L2'] <= Detect['Dimensions']['h']:
-    raise ValueError("L1-L2 distance too small: detector layers may overlap.")
-
-if Detect['Distances']['L2-L3'] <= Targ['thickness']:
-    raise ValueError("Target may overlap with inner detector layers.")
-
-if Targ['diameter'] / 2 >= abs(Magnet['y']) - Magnet['w'] / 2:
-    raise ValueError("Target overlaps magnet inner faces.")
-
+# Geometry sanity checks
+Geometry_Sanity_Check(Detect, Targ, Magnet)
+#-------
 
 
 ss = Header() + Initialization()
@@ -571,7 +639,7 @@ ss += Visual(Detect, vis_enable)
 ss += run(N_events, printFreq=10000)
 
 
-with open('my_run.mac','w') as f:
+with open('run.mac','w') as f:
     f.write(ss)
 
 

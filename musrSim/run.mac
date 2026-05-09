@@ -1,4 +1,6 @@
 ############################################################
+# This macro is generated via Gen_Macro.py!
+############################################################
 # Goal:
 #   Approximate simulation of the Si-pixel vx-muSR spectrometer 
 #   described in Mandok et al.(2026)
@@ -6,13 +8,13 @@
 # Convention:
 #   Beam direction = z-axis
 #   Sample centered at z = 0
-#   upstream detectors   (layer 1 and 2): z = -30 mm and -10 mm (ID 101 & 102)
-#   downstream detectors (layer 3 and 4): z = +10 mm and +30 mm (ID 103 & 104)
+#   upstream detectors   (Layer 1 and 2)
+#   downstream detectors (Layer 3 and 4)
 #   muon spin perpendicular to beam, along +x-axis
 #
 # Detector:
 # In the paper Si-pixel chip of one detector is a quad-module of 4 MuPix11 chips.
-# Here we approximate as one single modulewith:
+# Here we approximate as one single module with:
 #   - Si thickness: 100 um
 #   - Polyimide foil: 25 um
 #   - Polyimide/Kapton is represented using G4_KAPTON
@@ -32,132 +34,90 @@
 #   - vx-muSR test sample: 6 mm diameter Al disk
 #
 # Magnets:
-# In this version we are neglecting magnetic field from permanent magnets
-# in the next version add a uniform transverse field of about 6.3 mT around the sample.
+# Permanent magnets field
+# Uniform transverse field of about 6.3 mT around the sample.
+#
 ############################################################
-
-
+    
 ############################################################
-# 0. GENERAL INITIALIZATION
+# GENERAL INITIALIZATION
 ############################################################
 
 /control/verbose 0
 /run/verbose 0
 /tracking/verbose 0
 
-
+    
 ############################################################
 # WORLD
 ############################################################
 
-# Large air world.
+# Large world volume with Air.
 /musr/command construct box World 500 500 750 Air 0 0 0 no_logical_volume norot dead -1
 
+    
 ############################################################
 # Si-PIXEL DETECTORS
 ############################################################
 
 # MuPix11 active matrix approximation:
-#  - active area approximately 20 x 20 mm²
-#  - full thickness = 0.100 mm
-#  - Polyimide foil (Kapton): 25 um
+#  - active area approximately 40.0 x 40.0 mm²
+#  - full thickness = 100.0 um
+#  - Polyimide foil (Kapton): 25.0 um
 # 
 # One Layer Si-pixel detector has quad-module of 4 MuPix11 chips
 #
 # Layer positions:
-#   L1 z = -30 mm
-#   L2 z = -10 mm
-#   L3 z = +10 mm
-#   L4 z = +30 mm
-#
+#   L1 z = -30.0 mm
+#   L2 z = -10.0 mm
+#   L3 z = +10.0 mm
+#   L4 z = +30.0 mm
+# 
+# Mandok et al. (2026) does not describe the position of foils
+# From Fig.1 I belive the Polyimide foils are away from Target  
 
-# Layer 1: z = -30 mm & 25 um polyimide/Kapton foil, placed just downstream of Si layer.
-/musr/command construct box L1_Chip 20.0 20.0 0.05 G4_Si 0 0 -30 log_World norot musr/ScintSD 101
-/musr/command construct box L1_PolyimideFoil 20.0 20.0 0.0125 G4_KAPTON 0 0 -29.9375 log_World norot dead -1
+# Layer 1:
+/musr/command construct box L1_Chip 20.0 20.0 0.05 G4_Si 0 0 -30.0 log_World norot musr/ScintSD 101
+/musr/command construct box L1_PolyimideFoil 20.0 20.0 0.0125 G4_KAPTON 0 0 -30.0625 log_World norot dead -1
 
-# Layer 2: z = -10 mm & 25 um polyimide/Kapton foil, placed just downstream of Si layer.
-/musr/command construct box L2_Chip 20.0 20.0 0.05 G4_Si 0 0 -10 log_World norot musr/ScintSD 102
-/musr/command construct box L2_PolyimideFoil 20.0 20.0 0.0125 G4_KAPTON 0 0 -9.9375 log_World norot dead -1
+# Layer 2:
+/musr/command construct box L2_Chip 20.0 20.0 0.05 G4_Si 0 0 -10.0 log_World norot musr/ScintSD 102
+/musr/command construct box L2_PolyimideFoil 20.0 20.0 0.0125 G4_KAPTON 0 0 -10.0625 log_World norot dead -1
 
-# Layer 3: z = +10 mm & 25 um polyimide/Kapton foil, placed just downstream of Si layer.
-/musr/command construct box L3_Chip 20.0 20.0 0.05 G4_Si 0 0 10 log_World norot musr/ScintSD 103
+# Layer 3:
+/musr/command construct box L3_Chip 20.0 20.0 0.05 G4_Si 0 0 10.0 log_World norot musr/ScintSD 103
 /musr/command construct box L3_PolyimideFoil 20.0 20.0 0.0125 G4_KAPTON 0 0 10.0625 log_World norot dead -1
 
-# Layer 4: z = +30 mm & 25 um polyimide/Kapton foil, placed just downstream of Si layer.
-/musr/command construct box L4_Chip 20.0 20.0 0.05 G4_Si 0 0 30 log_World norot musr/ScintSD 104
+# Layer 4:
+/musr/command construct box L4_Chip 20.0 20.0 0.05 G4_Si 0 0 30.0 log_World norot musr/ScintSD 104
 /musr/command construct box L4_PolyimideFoil 20.0 20.0 0.0125 G4_KAPTON 0 0 30.0625 log_World norot dead -1
 
-
+    
 ############################################################
 # SAMPLE / TARGET
 ############################################################
 
-# The paper discusses two relevant sample cases:
-#
-# A) Simulation geometry:
-#      sample diameter = 20 mm
-#      used for evaluating vertex extrapolation uncertainty.
-#
-# B) First vx-muSR spectrum:
-#      6 mm diameter Al disk between permanent magnets,
-#      transverse field about 6.3 mT.
-#
-# Default below: Case A
-# Thickness is not specified in the paper.
-# Here full thickness = 1.0 mm, hz = 0.5 mm.
-# Tune thickness if stopping distribution does not peak inside Al.
-#
-# IMPORTANT:
-#   The name Target is useful because musrSim stores special
-#   muTarget* information for volumes named Target.
+/musr/command construct tubs Target 0 10.0 0.5 0 360 G4_Al 0 0 0.0 log_World norot dead 10
 
-# --- Default: simulation sample, 20 mm diameter to reproduce the scattering-resolution simulation of Sec. III. ---
-# Comment this and uncomment the 6 mm Al disk below to reproduce vx-muSR.
-/musr/command construct tubs Target 0 10.0 0.5 0 360 G4_Al 0 0 0 log_World norot dead 10
-
-# --- Alternative: simulation sample, 20 mm diameter ---
-# Uncomment this and comment the 20 mm Al disk above if reproducing vx-muSR.
-# /musr/command construct tubs Target 0 3.0 0.5 0 360 G4_Al 0 0 0 log_World norot dead 10
-
-
+    
 ############################################################
-# OPTIONAL SAMPLE SUSPENSION APPROXIMATION
+# MAGNET and Magnetic Field
 ############################################################
 
-# The paper says the samples were suspended on a frame using
-# aluminized mylar tape. Exact tape geometry is not specified.
-# These thin strips are optional and placed away from the beam center.
-#
-# Mylar full thickness = 20 um.
-# Very thin Al coating is neglected here. Uncomment if needed.
+/musr/command construct box Magnet_Top    5.0 1.0 5.0 G4_Fe 0.0 15.0  0.0 log_World norot dead -1
+/musr/command construct box Magnet_Bottom 5.0 1.0 5.0 G4_Fe 0.0 -15.0 0.0 log_World norot dead -1
 
-#/musr/command construct box MylarTape_Left  1.0 12.0 0.010 G4_MYLAR -8 0 0 log_World norot dead -1
-#/musr/command construct box MylarTape_Right 1.0 12.0 0.010 G4_MYLAR  8 0 0 log_World norot dead -1
+/musr/command globalfield Magnets 15.0 15.0 15.0 uniform 0.0 0 0.0 log_Target 0 0.0063 0 0 0 0
 
-############################################################
-# OPTIONAL MAGNET PLACEHOLDERS
-############################################################
+/musr/command globalfield printFieldValueAtPoint 0 0 0
+/musr/command globalfield printFieldValueAtPoint 0 0 14
+/musr/command globalfield printFieldValueAtPoint 0 0 16
+/musr/command globalfield printparameters
 
-# The real vx-muSR spectrum used permanent magnets above and below
-# the 6 mm Al disk to generate a transverse field around 6.3 mT.
-# The magnet dimensions/materials are not specified in the paper.
-#
-#/musr/command construct box Magnet_Top    5 1 5 G4_Fe 0  15 0 log_World norot dead -1
-#/musr/command construct box Magnet_Bottom 5 1 5 G4_Fe 0 -15 0 log_World norot dead -1
-
-# /musr/command globalField fieldName half x half y half z uniform X Y Z logicalVolume Bx By Bz Ex Ey Ez
-# /musr/command globalField Magnets 15 15 15 uniform 0 0 0 log_World 0 0.0063 0 0 0 0
-
+    
 ############################################################
 # PHYSICS CONFIGURATION
 ############################################################
-
-# Electromagnetic processes relevant for:
-#   - multiple Coulomb scattering in thin Si layers
-#   - ionization energy deposition in Si
-#   - positron transport after muon decay
-#
-# Decay is explicitly included for mu+ so that positrons are generated.
 
 # gamma
 /musr/command process addDiscreteProcess gamma G4PhotoElectricEffect
@@ -187,13 +147,10 @@
 /musr/command process addProcess e+  G4StepLimiter -1 -1 6
 /musr/command process addProcess e-  G4StepLimiter -1 -1 6
 
-
+    
 ############################################################
 # USER LIMITS AND CUTS
 ############################################################
-
-# For 100 um Si and 25 um foil, small steps are useful.
-# If the run is too slow, increase it.
 
 #/run/setCut 0.01 mm
 /musr/command SetUserLimits log_L1_Chip 0.01
@@ -202,22 +159,10 @@
 /musr/command SetUserLimits log_L4_Chip 0.01
 /musr/command SetUserLimits log_Target 0.01
 
+    
 ############################################################
 # PRIMARY BEAM
 ############################################################
-
-# Surface muon beam:
-#   kinetic energy about 4.1 MeV
-#   incident perpendicular to layer 1
-#   beam along +z-axis
-#   spin polarization perpendicular to beam, along +x-axis
-#
-# For the paper's Sec. III scattering simulation:
-#   pointlike muon beam, 10 million particles.
-#
-# For a more beamline-like run:
-#   use a small Gaussian or uniform transverse beam spot and
-#   build the Pb jaws to define/clean the aperture.
 
 # Primary particle
 /gun/particle mu+
@@ -229,88 +174,35 @@
 /gun/direction 0 0 1
 
 # Surface muon kinetic energy.
-#/gun/energy 4.1 MeV
-# Surface muon momentum
-/gun/momentum 28.0 MeV
+/gun/kenergy 4.1 MeV
 
 # Initial muon spin perpendicular to beam.
 /gun/polarization 1 0 0
 /gun/muonPolarizFraction 1.0
 
-# Pointlike beam: closest to paper Sec. III simulation.
-# No vertex smearing command needed if position is fixed.
-
-# Optional: finite beam spot.
-# Positive values = Gaussian sigma in mm.
-# Use sigma about 1 mm to stay mostly inside the 3 mm collimator aperture.
-#/gun/vertexsigma 1.0 1.0 0 mm
-
-# Optional: approximate continuous source timing.
-# 40 kHz corresponds to mean separation 25 us.
-# Use only if your musrSim primary generator supports this command.
-#/gun/meanarrivaltime 25 microsecond
-
-
+    
 ############################################################
 # OUTPUT SETTINGS
 ############################################################
 
-# All events for post-processing of:
-#   - hit coordinates in each Si layer
-#   - Target stopping coordinates
-#   - positron tracks
-#
-# If file size becomes too large, later restrict to events with
-# hits in the Si chips.
-
 /musr/command rootOutputDirectoryName data
 /musr/command storeOnlyEventsWithHits false
 
-# If using store-only filters, apply to all Si layers.
-# Uncomment only after confirming detector IDs in your output.
-#/musr/onlyStoreEventsWithHits 101
-#/musr/onlyStoreEventsWithHits 102
-#/musr/onlyStoreEventsWithHits 103
-#/musr/onlyStoreEventsWithHits 104
+    
+# Disable visualization for production.
+/vis/disable
 
-
-############################################################
-# VISUALIZATION ATTRIBUTES
-############################################################
-
-/musr/command visattributes log_World invisible
-
-/musr/command visattributes log_Target red
-
-/musr/command visattributes log_L1_Chip yellow
-/musr/command visattributes log_L2_Chip yellow
-/musr/command visattributes log_L3_Chip cyan
-/musr/command visattributes log_L4_Chip cyan
-
-/musr/command visattributes log_L1_PolyimideFoil green
-/musr/command visattributes log_L2_PolyimideFoil green
-/musr/command visattributes log_L3_PolyimideFoil green
-/musr/command visattributes log_L4_PolyimideFoil green
-
-#/musr/command visattributes log_MylarTape_Left blue
-#/musr/command visattributes log_MylarTape_Right blue
-
-
+        
 ############################################################
 # INITIALIZE AND RUN
 ############################################################
 
 /run/initialize
 
-# Disable visualization for production.
-/vis/disable
-#/control/execute vis.mac
-
 # Print frequency.
 /musr/run/howOftenToPrintEvent 10000
 
 # Production: /run/beamOn 10M
 # Start with 100k for debugging
-/run/beamOn 100000
-
+/run/beamOn 1000000
 

@@ -15,7 +15,6 @@
 /vis/modeling/trajectories/create/drawByParticleID
 /vis/scene/add/hits
 
-
 /vis/viewer/set/autoRefresh true
 /vis/viewer/flush
-
+    
