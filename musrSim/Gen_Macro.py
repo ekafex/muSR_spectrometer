@@ -121,29 +121,29 @@ def Limits_Cuts():
 
 # ==============================
 
-def Primary_Beam():
-    return """
+def Primary_Beam(Gun):
+    return f"""
 ############################################################
 # PRIMARY BEAM
 ############################################################
 
 # Primary particle
-/gun/particle mu+
+/gun/particle {Gun['particle']}
 
 # Start upstream of collimator and layer 1.
-/gun/position 0 0 -100 mm
+/gun/position {Gun['position']['x']} {Gun['position']['y']} {Gun['position']['z']} mm
 
-# Beam along +z.
-/gun/direction 0 0 1
+# Beam direction.
+/gun/direction {Gun['direction']['x']} {Gun['direction']['y']} {Gun['direction']['z']}
 
 # Surface muon kinetic energy.
-/gun/kenergy 4.1 MeV
+/gun/kenergy {Gun['kenergy']} MeV
 
 # Initial muon spin perpendicular to beam.
-/gun/polarization 1 0 0
-/gun/muonPolarizFraction 1.0
+/gun/polarization {Gun['polarization']['x']} {Gun['polarization']['y']} {Gun['polarization']['z']}
+/gun/muonPolarizFraction {Gun['muonPolarizFraction']}
 
-    """
+"""
     
 # Pointlike beam: closest to paper Sec. III simulation.
 # No vertex smearing command needed if position is fixed.
@@ -175,7 +175,7 @@ def ROOT_Output(Det : dict, onlyStoreEventsWithHits : bool = False):
     Returns
     -------
     Output settings string for the macro file.
-    """
+"""
     
     ID_L = Det['ID']
     flag = "true" if onlyStoreEventsWithHits else "false"
@@ -186,9 +186,12 @@ def ROOT_Output(Det : dict, onlyStoreEventsWithHits : bool = False):
 ############################################################
 
 /musr/command rootOutputDirectoryName data
+
+# For stopping/target studies keep false, otherwise events without detector hits are lost.
+# For final detector-only production, you may set this true.
 /musr/command storeOnlyEventsWithHits {flag}
 
-    """
+"""
     
     if onlyStoreEventsWithHits:
         s += f"""
@@ -198,7 +201,7 @@ def ROOT_Output(Det : dict, onlyStoreEventsWithHits : bool = False):
 /musr/onlyStoreEventsWithHits {ID_L['L3']}
 /musr/onlyStoreEventsWithHits {ID_L['L4']}
 
-    """
+"""
     return s
 
 # ==============================
@@ -225,7 +228,7 @@ def Visual(Det, vis_enable : bool = False):
 
 /vis/viewer/set/autoRefresh true
 /vis/viewer/flush
-    """
+"""
 
     if vis_enable:
         # Write vis.mac file
@@ -257,13 +260,13 @@ def Visual(Det, vis_enable : bool = False):
 # Disable visualization for production.
 /control/execute vis.mac
 
-        """
+"""
     else:
         s = """
 # Disable visualization for production.
 /vis/disable
 
-        """
+"""
     return s
 
 # ==============================
@@ -325,8 +328,6 @@ def Detector(Det : dict):
     Det['Dimensions'] : dictionary, full dimensions of the Si-pixel 
                         active area for every layer.
     Det['Distances'] : dictionary, distances between layers.
-    Det['z_offset']  : float, offset center of detector in the z-direction. 
-                       z=0 may not be the center of the detector.
     Det['Material'] : str, material of the Si-pixel active area.
     Det['Foil'] : dictionary, thickness and material of the Polyimide foil 
                   for each layer behind the chip in the +z direction.
@@ -344,10 +345,10 @@ def Detector(Det : dict):
     L_Name = Det['Names']
     F_Name = Foil['Names']
     # ---------------------------
-    z_L1 = Det['z_offset'] -Dist['L1-L2'] -Dist['L2-L3']/2 # mm z of Layer L1
-    z_L2 = Det['z_offset'] -Dist['L2-L3']/2                # mm z of Layer L2
-    z_L3 = Det['z_offset'] +Dist['L2-L3']/2                # mm z of Layer L3
-    z_L4 = Det['z_offset'] +Dist['L3-L4'] +Dist['L2-L3']/2 # mm z of Layer L4
+    z_L1 = -Dist['L1-L2'] -Dist['L2-L3']/2 # mm z of Layer L1
+    z_L2 = -Dist['L2-L3']/2                # mm z of Layer L2
+    z_L3 = +Dist['L2-L3']/2                # mm z of Layer L3
+    z_L4 = +Dist['L3-L4'] +Dist['L2-L3']/2 # mm z of Layer L4
     # ---------------------------
     ################################################
     # option A: all foils geometrically on +z side
@@ -597,7 +598,6 @@ Detect = {'ID':{'L1':101, 'L2':102, 'L3':103, 'L4':104},       # Layers IDs
                    'L3':'L3_Chip', 'L4':'L4_Chip'},            # Name of each layer (construct name)
           'Dimensions': {'l':40., 'w':40., 'h':0.1},           # full dimensions of 2x2 MuPix11 chips/layer
           'Distances':{'L1-L2':20., 'L2-L3':20., 'L3-L4':20.}, # distances between layers
-          'z_offset':0.0,                                      # offset in z-direction from z=0 being the center of detector.
           'Material':'G4_Si',                                  # Material of Si-pixel layers
           'Foil':{'h_foil':0.025,'Material':'G4_KAPTON',       # Polyimide foil thickness and material glued behind the chip in the +z direction
                   'Names':{'L1':'L1_PolyimideFoil', 
@@ -614,9 +614,17 @@ Targ= {'diameter':20.,'thickness':1.0,                         # Target/Sample d
 
 Magnet={'l':10.,'w':2.,'h':10.,'x':0.,'y':15.,'z':0.,          # Permanent magnet dimensions and position
         'Material':'G4_Fe',                                    # Permanent magnet material
-        'B_field':[0, 6.3e-3, 0],                              # Permanent magnet magnetic field vector
+        'B_field':[0, 0*6.3e-3, 0],                              # Permanent magnet magnetic field vector
         'field_box':{'l':30.,'w':30.,'h':30.}                  # Permanent magnet field box distribution
         }
+
+
+Gun = {'particle':'mu+',                                       # Primary particle
+       'position':{'x':0., 'y':0., 'z':-100.},                 # Start upstream position
+       'direction':{'x':0., 'y':0., 'z':1.},                   # Initial momentum direction
+       'kenergy':4.1,                                          # Initial kinetic energy of primary particle
+       'polarization':{'x':1., 'y':0., 'z':0.},                 # Initial muon spin perpendicular to beam, x-direction.
+       'muonPolarizFraction':1.0}                              # Full polarization
 
 # ===============================================================
 
@@ -633,7 +641,7 @@ ss += Target(Targ)
 ss += Magnets(Magnet)
 ss += Physics()
 ss += Limits_Cuts()
-ss += Primary_Beam()
+ss += Primary_Beam(Gun)
 ss += ROOT_Output(Detect, onlyStoreEventsWithHits)
 ss += Visual(Detect, vis_enable)
 ss += run(N_events, printFreq=10000)

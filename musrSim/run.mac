@@ -107,7 +107,7 @@
 /musr/command construct box Magnet_Top    5.0 1.0 5.0 G4_Fe 0.0 15.0  0.0 log_World norot dead -1
 /musr/command construct box Magnet_Bottom 5.0 1.0 5.0 G4_Fe 0.0 -15.0 0.0 log_World norot dead -1
 
-/musr/command globalfield Magnets 15.0 15.0 15.0 uniform 0.0 0 0.0 log_Target 0 0.0063 0 0 0 0
+/musr/command globalfield Magnets 15.0 15.0 15.0 uniform 0.0 0 0.0 log_Target 0 0.0 0 0 0 0
 
 /musr/command globalfield printFieldValueAtPoint 0 0 0
 /musr/command globalfield printFieldValueAtPoint 0 0 14
@@ -168,31 +168,34 @@
 /gun/particle mu+
 
 # Start upstream of collimator and layer 1.
-/gun/position 0 0 -100 mm
+/gun/position 0.0 0.0 -100.0 mm
 
-# Beam along +z.
-/gun/direction 0 0 1
+# Beam direction.
+/gun/direction 0.0 0.0 1.0
 
 # Surface muon kinetic energy.
 /gun/kenergy 4.1 MeV
 
 # Initial muon spin perpendicular to beam.
-/gun/polarization 1 0 0
+/gun/polarization 1.0 0.0 0.0
 /gun/muonPolarizFraction 1.0
 
-    
+
 ############################################################
 # OUTPUT SETTINGS
 ############################################################
 
 /musr/command rootOutputDirectoryName data
+
+# For stopping/target studies keep false, otherwise events without detector hits are lost.
+# For final detector-only production, you may set this true.
 /musr/command storeOnlyEventsWithHits false
 
-    
+
 # Disable visualization for production.
 /vis/disable
 
-        
+
 ############################################################
 # INITIALIZE AND RUN
 ############################################################
@@ -204,5 +207,5 @@
 
 # Production: /run/beamOn 10M
 # Start with 100k for debugging
-/run/beamOn 1000000
+/run/beamOn 100000
 

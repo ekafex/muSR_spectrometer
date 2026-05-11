@@ -1,0 +1,199 @@
+############################################################
+# ROOT OUTPUT SELECTION FOR vx-muSR STUDY
+############################################################
+
+############################################################
+# run/event bookkeeping
+############################################################
+
+/musr/command rootOutput runID on
+/musr/command rootOutput eventID on
+/musr/command rootOutput weight on
+
+# Essential when simulating continuous beam/pileup.
+# Keep this off for single-muon event studies.
+/musr/command rootOutput timeToNextEvent off
+
+
+############################################################
+# magnetic field at muon decay
+############################################################
+
+# Needed for checking field seen by the stopped/decaying muon.
+/musr/command rootOutput BFieldAtDecay on
+
+# Nominal field values. Useful diagnostic for field configuration.
+# Controlled with keyword fieldNomVal.
+/musr/command rootOutput fieldNomVal on
+
+
+############################################################
+# Initial muon state
+############################################################
+
+/musr/command rootOutput muIniTime on
+/musr/command rootOutput muIniPosX on
+/musr/command rootOutput muIniPosY on
+/musr/command rootOutput muIniPosZ on
+/musr/command rootOutput muIniMomX on
+/musr/command rootOutput muIniMomY on
+/musr/command rootOutput muIniMomZ on
+/musr/command rootOutput muIniPolX on
+/musr/command rootOutput muIniPolY on
+/musr/command rootOutput muIniPolZ on
+
+
+############################################################
+# Muon stop/decay information
+############################################################
+
+/musr/command rootOutput muDecayDetID on
+/musr/command rootOutput muDecayTime on
+/musr/command rootOutput muDecayPosX on
+/musr/command rootOutput muDecayPosY on
+/musr/command rootOutput muDecayPosZ on
+/musr/command rootOutput muDecayPolX on
+/musr/command rootOutput muDecayPolY on
+/musr/command rootOutput muDecayPolZ on
+
+
+############################################################
+# Target entry information
+############################################################
+
+/musr/command rootOutput muTargetTime on
+/musr/command rootOutput muTargetPolX on
+/musr/command rootOutput muTargetPolY on
+/musr/command rootOutput muTargetPolZ on
+/musr/command rootOutput muTargetMomX on
+/musr/command rootOutput muTargetMomY on
+/musr/command rootOutput muTargetMomZ on
+
+
+############################################################
+# Decay positron initial momentum
+############################################################
+
+/musr/command rootOutput posIniMomX on
+/musr/command rootOutput posIniMomY on
+/musr/command rootOutput posIniMomZ on
+
+
+############################################################
+# Detector hit information
+############################################################
+
+/musr/command rootOutput det_ID on
+/musr/command rootOutput det_edep on
+/musr/command rootOutput det_edep_mup on
+/musr/command rootOutput det_edep_pos on
+
+# Not interested in gamma-rays and e- deposited energy.
+/musr/command rootOutput det_edep_el off
+/musr/command rootOutput det_edep_gam off
+
+# Useful for hit timing, hit positions, and step/path diagnostics.
+/musr/command rootOutput det_nsteps on
+/musr/command rootOutput det_length on
+/musr/command rootOutput det_time_start on
+/musr/command rootOutput det_time_end on
+/musr/command rootOutput det_x on
+/musr/command rootOutput det_y on
+/musr/command rootOutput det_z on
+/musr/command rootOutput det_kine on
+
+
+############################################################
+# Minimal hit-origin identification
+# Useful to distinguish muon/positron/gamma/electron-related hits.
+############################################################
+
+/musr/command rootOutput det_VrtxParticleID on
+/musr/command rootOutput det_VrtxTrackID on
+/musr/command rootOutput det_VrtxVolID on
+/musr/command rootOutput det_VrtxProcID on
+
+# Verbose vertex coordinates/kinetic energy: usually not needed
+# because det_x, det_y, det_z and det_kine already describe the hit.
+/musr/command rootOutput det_VrtxKine off
+/musr/command rootOutput det_VrtxX off
+/musr/command rootOutput det_VrtxY off
+/musr/command rootOutput det_VrtxZ off
+
+
+############################################################
+# OFF: deeper causal backtracking variables
+# Turn ON for detailed ancestry debugging.
+############################################################
+
+/musr/command rootOutput det_VvvKine off
+/musr/command rootOutput det_VvvX off
+/musr/command rootOutput det_VvvY off
+/musr/command rootOutput det_VvvZ off
+/musr/command rootOutput det_VvvVolID off
+/musr/command rootOutput det_VvvProcID off
+/musr/command rootOutput det_VvvTrackID off
+/musr/command rootOutput det_VvvParticleID off
+
+
+############################################################
+# OFF: M0/M1/M2 special volumes (no M0/M1/M2 defined here)
+############################################################
+
+/musr/command rootOutput muM0Time off
+/musr/command rootOutput muM0PolX off
+/musr/command rootOutput muM0PolY off
+/musr/command rootOutput muM0PolZ off
+
+/musr/command rootOutput muM1Time off
+/musr/command rootOutput muM1PolX off
+/musr/command rootOutput muM1PolY off
+/musr/command rootOutput muM1PolZ off
+
+/musr/command rootOutput muM2Time off
+/musr/command rootOutput muM2PolX off
+/musr/command rootOutput muM2PolY off
+/musr/command rootOutput muM2PolZ off
+
+
+############################################################
+# OFF: optical photon outputs (no scintillation/optical transport).
+############################################################
+
+/musr/command rootOutput nOptPhot off
+/musr/command rootOutput nOptPhotDet off
+/musr/command rootOutput phot_time off
+
+/musr/command rootOutput odet_ID off
+/musr/command rootOutput odet_nPhot off
+/musr/command rootOutput odet_nPhotPrim off
+/musr/command rootOutput odet_timeFirst off
+/musr/command rootOutput odet_timeSecond off
+/musr/command rootOutput odet_timeThird off
+/musr/command rootOutput odet_timeA off
+/musr/command rootOutput odet_timeB off
+/musr/command rootOutput odet_timeC off
+/musr/command rootOutput odet_timeD off
+/musr/command rootOutput odet_timeMean off
+/musr/command rootOutput odet_timeLast off
+/musr/command rootOutput odet_timeCFD off
+/musr/command rootOutput odet_amplCFD off
+
+# Source-code-only extended optical arrays; normally OFF by default.
+/musr/command rootOutput odet_timeCFDarray off
+/musr/command rootOutput odet_timeC1 off
+
+
+############################################################
+# OFF: field integrals
+# Turn ON only for dedicated magnetic-field integration validation.
+############################################################
+
+/musr/command rootOutput fieldIntegralBx off
+/musr/command rootOutput fieldIntegralBy off
+/musr/command rootOutput fieldIntegralBz off
+/musr/command rootOutput fieldIntegralBz1 off
+/musr/command rootOutput fieldIntegralBz2 off
+/musr/command rootOutput fieldIntegralBz3 off
+
+
