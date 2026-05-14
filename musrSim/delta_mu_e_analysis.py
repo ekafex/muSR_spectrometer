@@ -5,10 +5,18 @@ Created on Sun May 10 11:05:59 2026
 @author: EK
 """
 
-#import ROOT
-#ROOT.EnableImplicitMT()
+import ROOT
+ROOT.EnableImplicitMT()
+import numpy as np
 
-##====================================================
+###########
+
+def quantiles_from_rdf(df, col):
+    arr = df.AsNumpy([col])[col]
+    return np.quantile(arr, [0.5, 0.68, 0.90, 0.95, 0.99, 0.999])
+
+
+#====================================================
 ## Declare helper functions only once
 #if not hasattr(ROOT, "_VX_MUSR_HELPERS_DECLARED"):
 #    ROOT.gInterpreter.Declare(r"""
@@ -58,6 +66,17 @@ Created on Sun May 10 11:05:59 2026
 #        return has_unique_hit_pid_det(detID, pid, det1, wanted_pid)
 #            && has_unique_hit_pid_det(detID, pid, det2, wanted_pid);
 #    }
+#    
+#    bool same_track_in_two_detectors(const RVec<int>& detID, const RVec<int>& pid,
+#                     const RVec<int>& trackID, int det1, int det2, int wanted_pid)
+#    {
+#    int i1 = find_unique_hit_pid_det(detID, pid, det1, wanted_pid);
+#    int i2 = find_unique_hit_pid_det(detID, pid, det2, wanted_pid);
+
+#    if (i1 < 0 || i2 < 0) return false;
+
+#    return trackID[i1] == trackID[i2];
+#    }
 
 #    double extrapolate_linear(double q1, double z1, double q2, double z2, double z0)
 #    {
@@ -65,8 +84,7 @@ Created on Sun May 10 11:05:59 2026
 #    }
 
 #    double extrapolate_coord_to_z0(const RVec<int>& detID, const RVec<int>& pid, const RVec<double>& q,
-#                                   int det1, int det2, int wanted_pid,
-#                                   double z1, double z2, double z0)
+#                                   int det1, int det2, int wanted_pid, double z1, double z2, double z0)
 #    {
 #        int i1 = find_unique_hit_pid_det(detID, pid, det1, wanted_pid);
 #        int i2 = find_unique_hit_pid_det(detID, pid, det2, wanted_pid);
@@ -85,17 +103,16 @@ Created on Sun May 10 11:05:59 2026
 #        return std::sqrt(dx*dx + dy*dy);
 #    }
 
-#    bool point_inside_cylinder_xy_z(double x, double y, double z, double radius,
-#                                    double half_thickness)
+#    bool point_inside_cylinder_xy_z(double x, double y, double z, double z0, double radius, double half_thickness)
 #    {
-#        return (x*x + y*y <= radius*radius) && (std::abs(z) <= half_thickness);
+#        return (x*x + y*y <= radius*radius) && (std::abs(z-z0) <= half_thickness);
 #    }
 #    """)
 #    ROOT._VX_MUSR_HELPERS_DECLARED = True
 
 
-##====================================================
-##====================================================
+#====================================================
+#====================================================
 
 
 #def build_delta(dframe, Detect, Targ, use_target_stop=True, target_det_id=None, dmatch=1.0):
@@ -141,13 +158,14 @@ Created on Sun May 10 11:05:59 2026
 #    PID_MUP = -13 #mu+ pid
 #    PID_EP  = -11 #e+  pid
 #    
-#    # z-position of each detector layer
-#    Z_L1 = -Detect['Distances']['L1-L2'] -Detect['Distances']['L2-L3']/2.0
-#    Z_L2 = -Detect['Distances']['L2-L3']/2.0
-#    Z_L3 = +Detect['Distances']['L2-L3']/2.0
-#    Z_L4 = +Detect['Distances']['L3-L4'] +Detect['Distances']['L2-L3']/2.0
-#    
 #    Z_SAMPLE = Targ['z'] # target z position
+#    
+#    # z-position of each detector layer
+#    Z_L1 = Z_SAMPLE -Detect['Distances']['L1-L2'] -Detect['Distances']['L2-L3']/2.0
+#    Z_L2 = Z_SAMPLE -Detect['Distances']['L2-L3']/2.0
+#    Z_L3 = Z_SAMPLE +Detect['Distances']['L2-L3']/2.0
+#    Z_L4 = Z_SAMPLE +Detect['Distances']['L3-L4'] +Detect['Distances']['L2-L3']/2.0
+#    
 #    sample_radius = Targ['diameter']/2.0 # sample radius
 #    sample_half_thickness = Targ['thickness']/2.0 # sample half-thickness (z-direction)
 #    
@@ -164,7 +182,7 @@ Created on Sun May 10 11:05:59 2026
 #        target_stop_cut = (
 #            f"point_inside_cylinder_xy_z("
 #            f"muDecayPosX, muDecayPosY, muDecayPosZ, "
-#            f"{sample_radius}, {sample_half_thickness})"
+#            f"{Z_SAMPLE}, {sample_radius}, {sample_half_thickness})"
 #        )
 
 #    # ------------------------------------------------------------
@@ -190,6 +208,7 @@ Created on Sun May 10 11:05:59 2026
 #        dframe
 #        .Filter(target_stop_cut, "muon decay/stop position inside target")
 #        .Filter(mu_tracklet_cut, "unique incoming mu+ L1-L2 tracklet")
+#        .Filter(f"same_track_in_two_detectors(det_ID, det_VrtxParticleID, det_VrtxTrackID, {L1_ID}, {L2_ID}, {PID_MUP})", "same muon track in L1 and L2") 
 #        .Define(
 #            "mu_x_at_sample",
 #            f"extrapolate_coord_to_z0(det_ID, det_VrtxParticleID, det_x, "
@@ -212,6 +231,9 @@ Created on Sun May 10 11:05:59 2026
 #        dframe
 #        .Filter(target_stop_cut, "muon decay/stop position inside target")
 #        .Filter(pos_tracklet_cut, "unique outgoing e+ L3-L4 tracklet")
+#        .Filter(f"same_track_in_two_detectors(det_ID, det_VrtxParticleID, det_VrtxTrackID, {L3_ID}, {L4_ID}, {PID_EP})", "same positron track in L3 and L4") 
+#        .Filter(f"det_time_start[find_unique_hit_pid_det(det_ID, det_VrtxParticleID, {L3_ID}, {PID_EP})] >= muDecayTime","L3 positron hit after muon decay")
+#        .Filter(f"det_time_start[find_unique_hit_pid_det(det_ID, det_VrtxParticleID, {L4_ID}, {PID_EP})] >= muDecayTime","L4 positron hit after muon decay")
 #        .Define(
 #            "pos_x_at_sample",
 #            f"extrapolate_coord_to_z0(det_ID, det_VrtxParticleID, det_x, "
@@ -269,20 +291,17 @@ Created on Sun May 10 11:05:59 2026
 
 
 
-##=======================================================================
-##=======================================================================
-##=======================================================================
-##=======================================================================
+#=======================================================================
+#=======================================================================
+#=======================================================================
+#=======================================================================
 
-#def Plot_delta(d):
+#def Plot_delta(d:list):
 #    c7 = ROOT.TCanvas("c_delta_mu_pos", "delta_mu", 900, 700)
+#    Targ= {'diameter':20.,'thickness':1.0,'z':0.} # Target/Sample diameter and thickness (of cylinder) 
 #    for i in range(len(d)):
-#        print(f'{d[i]}')
-#        Targ= {'diameter':20.,'thickness':1.0,'z':0.} # Target/Sample diameter and thickness (of cylinder)    
-#        Detect = {
-#            'ID':{'L1':101, 'L2':102, 'L3':103, 'L4':104},       # Detector Layers IDs
-#            'Distances':{'L1-L2':20., 'L2-L3':d[i], 'L3-L4':20.} # distances between layers
-#            }
+#        Detect = {'ID':{'L1':101, 'L2':102, 'L3':103, 'L4':104},        # Detector Layers IDs
+#                        'Distances':{'L1-L2':20., 'L2-L3':d[i], 'L3-L4':20.}} # distances between layers
 #        df = ROOT.RDataFrame("t1", f"data/musr_d{int(d[i])}mm_B0_0mT_N1e5.root")
 #        df_mu, df_e, df_vx = build_delta(df, Detect, Targ,use_target_stop=True, target_det_id=None, dmatch=1.0)
 #        h_delta_mu    = df_mu.Histo1D(("h_delta_mu", ";#delta_{#mu} [mm];Events", 120, 0.0, 5.0), "delta_mu")
@@ -302,40 +321,45 @@ Created on Sun May 10 11:05:59 2026
 #        h_delta_vx_mu.Draw("HIST SAME")
 #        h_delta_vx_e.Draw("HIST SAME")
 #        c7.SaveAs(f"delta_d={int(d[i])}mm.png")
+#        c7.Clear()
 
 
-#def file_delta_save(d):
-#    with open('data/delta_mu_e.dat','w') as f:
+#def delta(d:float, Detect:dict, Targ:dict):
+#    df = ROOT.RDataFrame("t1", f"data/musr_d{int(d)}mm_B0_0mT_N1e5.root")
+#    df_mu, df_e, df_vx = build_delta(df, Detect, Targ,use_target_stop=True, target_det_id=10, dmatch=1.0)
+#    Ntot      = df.Count().GetValue()
+#    n_mu      = df_mu.Count().GetValue()
+#    n_e       = df_e.Count().GetValue()
+#    n_mu_e_vx = df_vx.Count().GetValue()
+#    
+#    delta_mu_mean    = df_mu.Mean("delta_mu").GetValue()
+#    delta_e_mean     = df_e.Mean("delta_pos").GetValue()
+#    delta_mu_vx_mean = df_vx.Mean("delta_mu").GetValue()
+#    delta_e_vx_mean  = df_vx.Mean("delta_pos").GetValue()
+#    
+#    delta_mu_std    = df_mu.StdDev("delta_mu").GetValue()
+#    delta_e_std     = df_e.StdDev("delta_pos").GetValue()
+#    delta_mu_vx_std = df_vx.StdDev("delta_mu").GetValue()
+#    delta_e_vx_std  = df_vx.StdDev("delta_pos").GetValue()
+#    
+#    ss  = f'{d:.3f},{delta_mu_mean:.3f},{delta_mu_std:.3f},{delta_e_mean:.3f},{delta_e_std:.3f},'
+#    ss += f'{delta_mu_vx_mean:.3f},{delta_mu_vx_std:.3f},{delta_e_vx_mean:.3f},{delta_e_vx_std:.3f},'
+#    ss += f'{n_mu},{n_e},{n_mu_e_vx},{Ntot}\n'
+#    return ss, df, df_mu, df_e, df_vx
+
+
+#def save_delta(d:list, fname:str ='data/delta_mu_e.dat'):
+#    Targ= {'diameter':20.,'thickness':1.0,'z':0.} # Target/Sample diameter and thickness (of cylinder)    
+#    with open(fname,'w') as f:
 #        f.write('# d, delta_mu_mean, delta_mu_std, delta_e_mean, delta_e_std, delta_mu_vx_mean, delta_mu_vx_std, delta_e_vx_mean, delta_e_vx_std, N_mu, N_e, N_vx_mu_e, Ntot\n')
 #        f.write('# d & deltas are in mm. delta_*_vx is obtained from selecting events with L1&L2 muon and L3&L4 positron hits\n')
-#        for i in range(len(d)):
-#            print(f'{d[i]}')
-#            Targ= {'diameter':20.,'thickness':1.0,'z':0.} # Target/Sample diameter and thickness (of cylinder)    
-#            Detect = {
-#                'ID':{'L1':101, 'L2':102, 'L3':103, 'L4':104},       # Detector Layers IDs
-#                'Distances':{'L1-L2':20., 'L2-L3':d[i], 'L3-L4':20.} # distances between layers
-#                }
-#            df = ROOT.RDataFrame("t1", f"data/musr_d{int(d[i])}mm_B0_0mT_N1e5.root")
-#            df_mu, df_e, df_vx = build_delta(df, Detect, Targ,use_target_stop=True, target_det_id=None, dmatch=1.0)
-#            
-#            Ntot      = df.Count().GetValue()
-#            n_mu      = df_mu.Count().GetValue()
-#            n_e       = df_e.Count().GetValue()
-#            n_mu_e_vx = df_vx.Count().GetValue()
-#            
-#            delta_mu_mean    = df_mu.Mean("delta_mu").GetValue()
-#            delta_e_mean     = df_e.Mean("delta_pos").GetValue()
-#            delta_mu_vx_mean = df_vx.Mean("delta_mu").GetValue()
-#            delta_e_vx_mean  = df_vx.Mean("delta_pos").GetValue()
-#            
-#            delta_mu_std    = df_mu.StdDev("delta_mu").GetValue()
-#            delta_e_std     = df_e.StdDev("delta_pos").GetValue()
-#            delta_mu_vx_std = df_vx.StdDev("delta_mu").GetValue()
-#            delta_e_vx_std  = df_vx.StdDev("delta_pos").GetValue()
-#            
-#            f.write(f'{d[i]:.3f},{delta_mu_mean:.3f},{delta_mu_std:.3f},{delta_e_mean:.3f},{delta_e_std:.3f},{delta_mu_vx_mean:.3f},{delta_mu_vx_std:.3f},{delta_e_vx_mean:.3f},{delta_e_vx_std:.3f},{n_mu},{n_e},{n_mu_e_vx},{Ntot}\n')
+#        for dd in d:
+#            Detect = {'ID':{'L1':101, 'L2':102, 'L3':103, 'L4':104},        # Detector Layers IDs
+#                      'Distances':{'L1-L2':20., 'L2-L3':dd, 'L3-L4':20.}} # distances between layers
+#            print(f'd={dd}')
+#            ss, df, df_mu, df_e, df_vx = delta(dd, Detect, Targ)
+#            f.write(ss)
 #            del df, df_mu, df_e, df_vx
-
 
 
 #===================================================================
@@ -346,95 +370,120 @@ Created on Sun May 10 11:05:59 2026
 
 #Plot_delta(d)
 
-#file_delta_save(d)
+#save_delta(d, fname='data/delta_mu_e.dat')
+
+#===================================================================
+
+df = ROOT.RDataFrame("t1", "data/musr_d20mm_B0_0mT_N1e5.root")
+
+muDecay  = df.AsNumpy(["muDecayPosX", "muDecayPosY", "muDecayPosZ", "muDecayTime"])
+det_det  = df.AsNumpy(["det_ID", "det_x", "det_y", "det_z"])
+det_vrtx = df.AsNumpy(["det_VrtxX", "det_VrtxY", "det_VrtxZ", "det_VrtxProcID", "det_VrtxParticleID", "det_VrtxTrackID"])
+
+
+
+
+#===================================================================
+
+
+#print("mu quantiles:", quantiles_from_rdf(df_mu, "delta_mu"))
+#print("pos quantiles:", quantiles_from_rdf(df_e, "delta_pos"))
+
+#i = 0
+#Targ= {'diameter':20.,'thickness':1.0,'z':0.} # Target/Sample diameter and thickness (of cylinder)  
+#Detect = {'ID':{'L1':101, 'L2':102, 'L3':103, 'L4':104},        # Detector Layers IDs
+#          'Distances':{'L1-L2':20., 'L2-L3':d[i], 'L3-L4':20.}}
+
+#ss, df, df_mu, df_e, df_vx = delta(d[i], Detect, Targ)
 
 #===================================================================
 #===================================================================
 #===================================================================
 
 
-import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
-data = np.loadtxt('data/delta_mu_e.dat',dtype=float, delimiter=',')
+#data = np.loadtxt('data/delta_mu_e.dat',dtype=float, delimiter=',')
 
+#MandokFig4 = np.array([[5.0,0.16],[10.0,0.33],[20.0,0.66],[30.0,0.96],[40.0,1.26]]) 
 
-d = data[:,0]
-delta_mu = data[:,1:3]
-delta_e = data[:,3:5]
-delta_mu_vx = data[:,5:7]
-delta_e_vx  = data[:,7:9]
-NN = data[:,9:]
-N_events = NN[:,-1]
+#d = data[:,0]
+#delta_mu = data[:,1:3]
+#delta_e = data[:,3:5]
+#delta_mu_vx = data[:,5:7]
+#delta_e_vx  = data[:,7:9]
+#NN = data[:,9:]
+#N_events = NN[:,-1]
 
-xd = np.linspace(0,45,100)
+#xd = np.linspace(0,45,100)
 
-plt.figure()
-p_mean_mu = np.polyfit(d, delta_mu[:,0], 1)
-p_mean_e  = np.polyfit(d, delta_e[:,0], 1)
-d_mean_mu_fit = np.poly1d(p_mean_mu)
-d_mean_e_fit  = np.poly1d(p_mean_e)
+#plt.figure()
+#p_mean_mu = np.polyfit(d, delta_mu[:,0], 1)
+#p_mean_e  = np.polyfit(d, delta_e[:,0], 1)
+#d_mean_mu_fit = np.poly1d(p_mean_mu)
+#d_mean_e_fit  = np.poly1d(p_mean_e)
+#plt.plot(d,delta_mu[:,0],'or',lw=2,label=r'$\mu^+$')
+#plt.plot(d,delta_e[:,0],'ob',lw=2,label=r'$e^+$')
+#plt.plot(xd,d_mean_mu_fit(xd),'-k',lw=2,label=r'fit $\mu^+$')
+#plt.plot(xd,d_mean_e_fit(xd),'-c',lw=2,label=r'fit $e^+$')
+#plt.plot(MandokFig4[:,0], MandokFig4[:,1],'og',lw=2,label='Mandok et.al(2026)')
+#plt.xlabel(r'$d\;{\rm [mm]}$')
+#plt.ylabel(r'$\bar{\delta}_{\mu^+/e^+};{\rm [mm]}$')
+#plt.legend()
+#plt.savefig('Mean_delta_vs_d.png')
 
-plt.plot(d,delta_mu[:,0],'or',lw=2,label=r'$\mu^+$')
-plt.plot(d,delta_e[:,0],'ob',lw=2,label=r'$e^+$')
-plt.plot(xd,d_mean_mu_fit(xd),'-k',lw=2,label=r'fit $\mu^+$')
-plt.plot(xd,d_mean_e_fit(xd),'-c',lw=2,label=r'fit $e^+$')
-plt.xlabel(r'$d\;{\rm [mm]}$')
-plt.ylabel(r'$\bar{\delta}_{\mu^+/e^+};{\rm [mm]}$')
-plt.legend()
+#plt.figure()
+#p_std_mu = np.polyfit(d, delta_mu[:,1], 1)
+#p_std_e  = np.polyfit(d, delta_e[:,1], 1)
+#d_std_mu_fit = np.poly1d(p_std_mu)
+#d_std_e_fit  = np.poly1d(p_std_e)
+#plt.plot(d,delta_mu[:,1],'or',lw=2,label=r'$\mu^+$')
+#plt.plot(d,delta_e[:,1],'ob',lw=2,label=r'$e^+$')
+#plt.plot(xd,d_std_mu_fit(xd),'-k',lw=2,label=r'fit $\mu^+$')
+#plt.plot(xd,d_std_e_fit(xd),'-c',lw=2,label=r'fit $e^+$')
+#plt.plot(MandokFig4[:,0], MandokFig4[:,1],'og',lw=2,label='Mandok et.al(2026)')
+#plt.xlabel(r'$d\;{\rm [mm]}$')
+#plt.ylabel(r'$\Delta\delta_{\mu^+/e^+};{\rm [mm]}$')
+#plt.legend()
+#plt.savefig('Std_delta_vs_d.png')
 
-
-plt.figure()
-p_std_mu = np.polyfit(d, delta_mu[:,1], 1)
-p_std_e  = np.polyfit(d, delta_e[:,1], 1)
-d_std_mu_fit = np.poly1d(p_std_mu)
-d_std_e_fit  = np.poly1d(p_std_e)
-
-plt.plot(d,delta_mu[:,1],'or',lw=2,label=r'$\mu^+$')
-plt.plot(d,delta_e[:,1],'ob',lw=2,label=r'$e^+$')
-plt.plot(xd,d_std_mu_fit(xd),'-k',lw=2,label=r'fit $\mu^+$')
-plt.plot(xd,d_std_e_fit(xd),'-c',lw=2,label=r'fit $e^+$')
-plt.xlabel(r'$d\;{\rm [mm]}$')
-plt.ylabel(r'$\Delta\delta_{\mu^+/e^+};{\rm [mm]}$')
-plt.legend()
-
-
-plt.figure()
-p_mean_mu_vx = np.polyfit(d, delta_mu[:,0], 1)
-p_mean_e_vx  = np.polyfit(d, delta_e[:,0], 1)
-d_mean_mu_vx_fit = np.poly1d(p_mean_mu_vx)
-d_mean_e_vx_fit  = np.poly1d(p_mean_e_vx)
-plt.plot(d,delta_mu_vx[:,0],'or',lw=2,label=r'vx-SR $\mu^+$')
-plt.plot(d,delta_e_vx[:,0],'ob',lw=2,label=r'vx-SR $e^+$')
-plt.plot(xd,d_mean_mu_vx_fit(xd),'-k',lw=2,label=r'fit vx-SR $\mu^+$')
-plt.plot(xd,d_mean_e_vx_fit(xd),'-c',lw=2,label=r'fit vx-SR $e^+$')
-plt.xlabel(r'$d\;{\rm [mm]}$')
-plt.ylabel(r'$\bar{\delta}_{\mu^+/e^+}\;{\rm [mm]}$')
-plt.legend()
-
-
-plt.figure()
-p_std_mu_vx = np.polyfit(d, delta_mu[:,1], 1)
-p_std_e_vx  = np.polyfit(d, delta_e[:,1], 1)
-d_std_mu_vx_fit = np.poly1d(p_std_mu_vx)
-d_std_e_vx_fit  = np.poly1d(p_std_e_vx)
-plt.plot(d,delta_mu_vx[:,1],'om',lw=2,label=r'vx-SR $\mu^+$')
-plt.plot(d,delta_e_vx[:,1],'og',lw=2,label=r'vx-SR $e^+$')
-plt.plot(xd,d_std_mu_vx_fit(xd),'-k',lw=2,label=r'fit vx-SR $\mu^+$')
-plt.plot(xd,d_std_e_vx_fit(xd),'-c',lw=2,label=r'fit vx-SR $e^+$')
-plt.xlabel(r'$d\;{\rm [mm]}$')
-plt.ylabel(r'$\Delta\delta_{\mu^+/e^+};{\rm [mm]}$')
-plt.legend()
+##plt.figure()
+##p_mean_mu_vx = np.polyfit(d, delta_mu_vx[:,0], 1)
+##p_mean_e_vx  = np.polyfit(d, delta_e_vx[:,0], 1)
+##d_mean_mu_vx_fit = np.poly1d(p_mean_mu_vx)
+##d_mean_e_vx_fit  = np.poly1d(p_mean_e_vx)
+##plt.plot(d,delta_mu_vx[:,0],'or',lw=2,label=r'vx-SR $\mu^+$')
+##plt.plot(d,delta_e_vx[:,0],'ob',lw=2,label=r'vx-SR $e^+$')
+##plt.plot(xd,d_mean_mu_vx_fit(xd),'-k',lw=2,label=r'fit vx-SR $\mu^+$')
+##plt.plot(xd,d_mean_e_vx_fit(xd),'-c',lw=2,label=r'fit vx-SR $e^+$')
+##plt.plot(MandokFig4[:,0], MandokFig4[:,1],'og',lw=2,label='Mandok et.al(2026)')
+##plt.xlabel(r'$d\;{\rm [mm]}$')
+##plt.ylabel(r'$\bar{\delta}_{\mu^+/e^+}\;{\rm [mm]}$')
+##plt.legend()
+##plt.savefig('Mean_delta_vs_d_vx.png')
 
 
+##plt.figure()
+##p_std_mu_vx = np.polyfit(d, delta_mu_vx[:,1], 1)
+##p_std_e_vx  = np.polyfit(d, delta_e_vx[:,1], 1)
+##d_std_mu_vx_fit = np.poly1d(p_std_mu_vx)
+##d_std_e_vx_fit  = np.poly1d(p_std_e_vx)
+##plt.plot(d,delta_mu_vx[:,1],'om',lw=2,label=r'vx-SR $\mu^+$')
+##plt.plot(d,delta_e_vx[:,1],'og',lw=2,label=r'vx-SR $e^+$')
+##plt.plot(xd,d_std_mu_vx_fit(xd),'-k',lw=2,label=r'fit vx-SR $\mu^+$')
+##plt.plot(xd,d_std_e_vx_fit(xd),'-c',lw=2,label=r'fit vx-SR $e^+$')
+##plt.plot(MandokFig4[:,0], MandokFig4[:,1],'og',lw=2,label='Mandok et.al(2026)')
+##plt.xlabel(r'$d\;{\rm [mm]}$')
+##plt.ylabel(r'$\Delta\delta_{\mu^+/e^+};{\rm [mm]}$')
+##plt.legend()
+##plt.savefig('Std_delta_vs_d_vx.png')
 
-plt.show()
+
+#plt.show()
 
 
-
-
-for i in range(len(NN[:,0])):
-    print(f'd={d[i]}, mu+={(100*NN[i,0]/N_events[i]):.1f}%, e+={(100*NN[i,1]/N_events[i]):.1f}%,mu+&e+={(100*NN[i,2]/N_events[i]):.1f}%')
+##for i in range(len(NN[:,0])):
+##    print(f'd={d[i]}, mu+={(100*NN[i,0]/N_events[i]):.1f}%, e+={(100*NN[i,1]/N_events[i]):.1f}%,mu+&e+={(100*NN[i,2]/N_events[i]):.1f}%')
 
 
 
