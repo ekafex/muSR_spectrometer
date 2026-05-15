@@ -8,6 +8,7 @@ Created on Sun May 10 11:05:59 2026
 import ROOT
 ROOT.EnableImplicitMT()
 import numpy as np
+import matplotlib.pyplot as plt
 
 ###########
 
@@ -373,6 +374,9 @@ def quantiles_from_rdf(df, col):
 #save_delta(d, fname='data/delta_mu_e.dat')
 
 #===================================================================
+
+# mu+ criteria (1. mu+ stops and decay in the target 2. mu+ has L1&L2 hits 3. time order T(L1)<T(L2))
+# e+  criteria (1. e+ originates in target 2. e+ has L3&L4 hits 3. e+ time order T(L3)<T(L4))
 
 df = ROOT.RDataFrame("t1", "data/musr_d20mm_B0_0mT_N1e5.root")
 

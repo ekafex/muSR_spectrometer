@@ -10,8 +10,8 @@ Created on Mon May  4 19:10:31 2026
  "det_ID", "det_VrtxProcID", "det_VrtxParticleID", "det_VrtxTrackID", "det_VrtxVolID",
  "det_VrtxKine", "det_VrtxX", "det_VrtxY", "det_VrtxZ", 
  
- ""det_VvvParticleID", "det_VvvProcID", "det_VvvTrackID", "det_VvvVolID", 
-  det_VvvKine", "det_VvvX", "det_VvvY", "det_VvvZ", 
+ "det_VvvParticleID", "det_VvvProcID", "det_VvvTrackID", "det_VvvVolID", 
+ "det_VvvKine", "det_VvvX", "det_VvvY", "det_VvvZ", 
  
  "det_edep", "det_edep_el", "det_edep_gam", "det_edep_mup", "det_edep_pos", 
  
