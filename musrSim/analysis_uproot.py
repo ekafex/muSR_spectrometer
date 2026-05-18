@@ -86,6 +86,30 @@ def plotting_header(size="single", dpi=200, minor_ticks=True):
 
     return fig, ax
 
+# ============================================================
+# ============================================================
+# ============================================================
+
+def Plot_L1_E_dep_mu_pos(arr, savefig=False):
+    hit_L1_mu=(arr["det_VrtxParticleID"] == PID_MUP) & (arr["det_ID"] == DET_L1)
+    hit_L1_ep=(arr["det_VrtxParticleID"] == PID_POS) & (arr["det_ID"] == DET_L1)
+    dep_mu_L1 = ak.to_numpy(ak.firsts(arr["det_edep"][hit_L1_mu]))
+    dep_ep_L1 = ak.to_numpy(ak.firsts(arr["det_edep"][hit_L1_ep]))
+    bins = np.linspace(0, 0.9, 241)
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+    h_mu_L1_edep, _ = np.histogram(dep_mu_L1, bins=bins)
+    h_ep_L1_edep, _ = np.histogram(dep_ep_L1, bins=bins)
+    set_publication_style()
+    fig1, ax1 = plotting_header(size="single")
+    ax1.plot(bin_centers, h_mu_L1_edep, '-r', ds="steps-mid", label=r"$\mu^+$")
+    ax1.plot(bin_centers, h_ep_L1_edep, '-k', ds="steps-mid", label=r"$e^+$")
+    ax1.set_xlabel(r"L1 Energy Deposit $\mathrm{[MeV]}$")
+    ax1.set_ylabel("Counts")
+    ax1.set_xlim(0, 0.8)
+    ax1.set_ylim(bottom=0)
+    ax1.legend(loc=0)
+    if savefig:
+        fig1.savefig('plots/Energy_Deposit_L1.pdf')
 
 # ============================================================
 # Load ROOT data
@@ -122,13 +146,12 @@ dd = 20.
 with uproot.open(f"data/musr_d{int(dd)}mm_B0_0mT_N1e5.root")["t1"] as tree:
     arr = tree.arrays(branches, library="ak")
 
+# Plot_L1_E_dep_mu_pos(arr, savefig=0)
 
 
-hit_L1_mu=(arr["det_VrtxParticleID"] == PID_MUP) & (arr["det_ID"] == DET_L1)
-hit_L1_ep=(arr["det_VrtxParticleID"] == PID_POS) & (arr["det_ID"] == DET_L1)
+hit_Target = (arr["muDecayDetID"] == TARGET_ID)
 
 
-arr["det_edep_mup"][hit_L1_mu]
 
 
 # N_BINS = 100
@@ -136,7 +159,7 @@ arr["det_edep_mup"][hit_L1_mu]
 # bins = np.linspace(-0.5, 0.5, N_BINS + 1)
 # bin_centers = 0.5 * (bins[:-1] + bins[1:])
 
-# h_edep_Z, _ = np.histogram(delta_mu_np, bins=bins)
+# # h_edep_Z, _ = np.histogram(delta_mu_np, bins=bins)
 
 
 
