@@ -9,8 +9,79 @@ import ROOT
 ROOT.EnableImplicitMT()
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mpl
+from matplotlib.ticker import AutoMinorLocator
 
-###########
+mpl.rcParams["figure.dpi"] = 160
+#######################################################
+#######################################################
+FIG_SIZES = {
+    "single": (3.35, 2.45),
+    "single_tall": (3.35, 3.0),
+    "double": (6.9, 4.2),
+    "square": (3.35, 3.35),
+}
+
+PLOT_STYLE = {
+    "font.family": "serif",
+    "font.serif": ["STIXGeneral", "STIX Two Text", "DejaVu Serif"],
+    "mathtext.fontset": "stix",
+
+    "font.size": 9,
+    "axes.labelsize": 10,
+    "axes.titlesize": 10,
+    "xtick.labelsize": 8,
+    "ytick.labelsize": 8,
+    "legend.fontsize": 8,
+
+    "axes.linewidth": 1.0,
+    "lines.linewidth": 1.4,
+    "lines.markersize": 4,
+
+    "xtick.direction": "in",
+    "ytick.direction": "in",
+    "xtick.top": True,
+    "ytick.right": True,
+
+    "xtick.major.size": 4,
+    "ytick.major.size": 4,
+    "xtick.minor.size": 2.5,
+    "ytick.minor.size": 2.5,
+
+    "xtick.major.width": 0.9,
+    "ytick.major.width": 0.9,
+    "xtick.minor.width": 0.7,
+    "ytick.minor.width": 0.7,
+
+    "legend.frameon": False,
+
+    "savefig.dpi": 300,
+    "savefig.bbox": "tight",
+    "savefig.pad_inches": 0.02,
+
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
+    "svg.fonttype": "none",
+}
+
+def set_publication_style():
+    mpl.rcParams.update(PLOT_STYLE)
+
+def PlottingHeader(size="single",WH=None,dpi=200,minor_ticks=True):
+    if WH is None:
+        WH = FIG_SIZES[size]
+    fig, ax = plt.subplots(figsize=WH, dpi=dpi, constrained_layout=True)
+    for spine in ax.spines.values():
+        spine.set_linewidth(mpl.rcParams["axes.linewidth"])
+    ax.tick_params(axis="both", which="both", direction="in", top=True, right=True)
+    if minor_ticks:
+        ax.minorticks_on()
+        ax.xaxis.set_minor_locator(AutoMinorLocator())
+        ax.yaxis.set_minor_locator(AutoMinorLocator())
+    return fig, ax
+
+#====================================================
+#====================================================
 
 def quantiles_from_rdf(df, col):
     arr = df.AsNumpy([col])[col]
