@@ -276,11 +276,11 @@ def Save_Plot_Deltas(d:list, DELTA_MAX:float=5.0, N_BINS:int=150, SAVE_FIGURE:bo
             ax.set_ylabel("Counts")
             ax.set_xlim(0, DELTA_MAX)
             ax.set_ylim(bottom=0)
-            ax.legend()
+            ax.legend(loc=0, title=r'$d=%d$ mm'%dd)
             # Uncomment if tails matter:
             # ax.set_yscale("log")
             if SAVE_FIGURE:
-                fig.savefig(f"delta_d{int(dd)}mm.pdf")
+                fig.savefig(f"plots/delta_mu_e/delta_d{int(dd)}mm.pdf")
             plt.show()
             plt.close(fig)
             #---------------
@@ -314,7 +314,7 @@ def Save_Plot_Deltas(d:list, DELTA_MAX:float=5.0, N_BINS:int=150, SAVE_FIGURE:bo
 # Save data and plot histograms
 # =================================
 # d = [5.,10.,15.,20.,25.,30.,35.,40.]
-# Save_Plot_Deltas(d, DELTA_MAX=5.0,N_BINS=150, SAVE_FIGURE=False)
+# Save_Plot_Deltas(d, DELTA_MAX=5.0,N_BINS=150, SAVE_FIGURE=True)
 
 
 # =====================================================================
@@ -323,54 +323,54 @@ def Save_Plot_Deltas(d:list, DELTA_MAX:float=5.0, N_BINS:int=150, SAVE_FIGURE:bo
 # Plot delta mean and std
 # ==========================
 
-# data = np.loadtxt('data/deltas.dat',dtype=float, delimiter=',')
+data = np.loadtxt('data/deltas.dat',dtype=float, delimiter=',')
 
-# SAVE_FIGS = False
+SAVE_FIGS = 0
 
-# d = data[:,0]
-# dmu_mean, dmu_std = data[:,1], data[:,2]
-# dep_mean, dep_std = data[:,3], data[:,4]
+d = data[:,0]
+dmu_mean, dmu_std = data[:,1], data[:,2]
+dep_mean, dep_std = data[:,3], data[:,4]
 
-# xd = np.linspace(0,45,100)
-# p_std_mu = np.polyfit(d, dmu_std, 1)
-# p_std_ep = np.polyfit(d, dep_std, 1)
-# fit_std_mu = np.poly1d(p_std_mu)
-# fit_std_ep = np.poly1d(p_std_ep)
+xd = np.linspace(0,45,100)
+p_std_mu = np.polyfit(d, dmu_std, 1)
+p_std_ep = np.polyfit(d, dep_std, 1)
+fit_std_mu = np.poly1d(p_std_mu)
+fit_std_ep = np.poly1d(p_std_ep)
 
-# MandokFig4 = np.array([[5.0,0.16],[10.0,0.33],[20.0,0.66],[30.0,0.96],[40.0,1.26]]) 
-# set_publication_style()
+MandokFig4 = np.array([[5.0,0.16],[10.0,0.33],[20.0,0.66],[30.0,0.96],[40.0,1.26]]) 
+set_publication_style()
 
-# fig1, ax1 = plotting_header(size="single")
-# ax1.plot(d, dmu_std, "ok", ms=3, label=r"$\sigma\left(\delta_\mu\right)$")
-# ax1.plot(d, dep_std, "or", ms=3, label=r"$\sigma\left(\delta_e\right)$")
-# ax1.plot(MandokFig4[:,0], MandokFig4[:,1],"^b", ms=3, label=r"Mandok(2026) $\sigma\left(\delta_\mu\right)$")
-# ax1.plot(xd, fit_std_mu(xd), "-k", label=r"$\sigma\left(\delta_\mu\right)=%.3f d+ %.2f$"%(p_std_mu[0],p_std_mu[1]))
-# ax1.plot(xd, fit_std_ep(xd), "-r", label=r"$\sigma\left(\delta_e\right)=%.3f d+ %.2f$"%(p_std_ep[0],p_std_ep[1]))
-# ax1.set_xlabel(r"$d \; \mathrm{[mm]}$")
-# ax1.set_ylabel(r"$\sigma\left(\delta \right) \; \mathrm{[mm]}$")
-# ax1.set_xlim(0, 45)
-# ax1.set_ylim(0, 1.3)
-# ax1.legend(loc=0)
-# if SAVE_FIGS:
-#     fig1.savefig("plots/Std_deltas.pdf")
+fig1, ax1 = plotting_header(size="single")
+ax1.plot(d, dmu_std, "or", ms=3, label=r"$\sigma\left(\delta_\mu\right)$")
+ax1.plot(d, dep_std, "sb", ms=3, label=r"$\sigma\left(\delta_e\right)$")
+ax1.plot(MandokFig4[:,0], MandokFig4[:,1],"-^k", ms=4, label=r"Mandok(2026) $\sigma\left(\delta_\mu\right)$")
+ax1.plot(xd, fit_std_mu(xd), "-r", label=r"$\sigma\left(\delta_\mu\right)=%.3f d+ %.2f$"%(p_std_mu[0],p_std_mu[1]))
+ax1.plot(xd, fit_std_ep(xd), "-b", label=r"$\sigma\left(\delta_e\right)=%.3f d+ %.2f$"%(p_std_ep[0],p_std_ep[1]))
+ax1.set_xlabel(r"$d \; \mathrm{[mm]}$")
+ax1.set_ylabel(r"$\sigma\left(\delta \right) \; \mathrm{[mm]}$")
+ax1.set_xlim(0, 45)
+ax1.set_ylim(0, 1.5)
+ax1.legend(loc=2)
+if SAVE_FIGS:
+    fig1.savefig("plots/Std_deltas.pdf")
 
-# p_mean_mu = np.polyfit(d, dmu_mean, 1)
-# p_mean_ep = np.polyfit(d, dep_mean, 1)
-# fit_mean_mu = np.poly1d(p_mean_mu)
-# fit_mean_ep = np.poly1d(p_mean_ep)
+p_mean_mu = np.polyfit(d, dmu_mean, 1)
+p_mean_ep = np.polyfit(d, dep_mean, 1)
+fit_mean_mu = np.poly1d(p_mean_mu)
+fit_mean_ep = np.poly1d(p_mean_ep)
 
-# fig2, ax2 = plotting_header(size="single")
-# ax2.plot(d, dmu_mean, "ok", ms=3, label=r"$\left\langle\delta_\mu\right\rangle$")
-# ax2.plot(d, dep_mean, "or", ms=3, label=r"$\left\langle\delta_e\right\rangle$")
-# ax2.plot(xd, fit_mean_mu(xd), "-k", label=r"$\left\langle\delta_\mu\right\rangle= %.3f d %.2f$"%(p_mean_mu[0],p_mean_mu[1]))
-# ax2.plot(xd, fit_mean_ep(xd), "-r", label=r"$\left\langle\delta_e\right\rangle = %.3f d+ %.2f$"%(p_mean_ep[0],p_mean_ep[1]))
-# ax2.set_xlabel(r"$d \; \mathrm{[mm]}$")
-# ax2.set_ylabel(r"$\left\langle\delta\right\rangle \; \mathrm{[mm]}$")
-# ax2.set_xlim(0, 45)
-# ax2.set_ylim(0, 1.6)
-# ax2.legend(loc=0)
-# if SAVE_FIGS:
-#     fig2.savefig("plots/Mean_deltas.pdf")
+fig2, ax2 = plotting_header(size="single")
+ax2.plot(d, dmu_mean, "or", ms=3, label=r"$\left\langle\delta_\mu\right\rangle$")
+ax2.plot(d, dep_mean, "sb", ms=3, label=r"$\left\langle\delta_e\right\rangle$")
+ax2.plot(xd, fit_mean_mu(xd), "-r", label=r"$\left\langle\delta_\mu\right\rangle= %.3f d %.2f$"%(p_mean_mu[0],p_mean_mu[1]))
+ax2.plot(xd, fit_mean_ep(xd), "-b", label=r"$\left\langle\delta_e\right\rangle = %.3f d+ %.2f$"%(p_mean_ep[0],p_mean_ep[1]))
+ax2.set_xlabel(r"$d \; \mathrm{[mm]}$")
+ax2.set_ylabel(r"$\left\langle\delta\right\rangle \; \mathrm{[mm]}$")
+ax2.set_xlim(0, 45)
+ax2.set_ylim(0, 1.6)
+ax2.legend(loc=0)
+if SAVE_FIGS:
+    fig2.savefig("plots/Mean_deltas.pdf")
 
 
 # =====================================================================
@@ -379,27 +379,27 @@ def Save_Plot_Deltas(d:list, DELTA_MAX:float=5.0, N_BINS:int=150, SAVE_FIGURE:bo
 # Plot efficiency in each layer
 # ================================
 
-data = np.loadtxt('data/deltas.dat',dtype=float, delimiter=',')
+# data = np.loadtxt('data/deltas.dat',dtype=float, delimiter=',')
 
-SAVE_FIGS = False
+# SAVE_FIGS = False
 
-d = data[:,0]
-Nmu_L1,Nmu_L2,Nep_L3,Nep_L4 = data[:,5],data[:,6],data[:,7],data[:,8]
-Nmu_clean,Nep_clean = data[:,9],data[:,10]
-Ntot = data[:,11]
+# d = data[:,0]
+# Nmu_L1,Nmu_L2,Nep_L3,Nep_L4 = data[:,5],data[:,6],data[:,7],data[:,8]
+# Nmu_clean,Nep_clean = data[:,9],data[:,10]
+# Ntot = data[:,11]
 
-fig3, ax3 = plotting_header(size="single")
-ax3.plot(d, 100*Nmu_L1/Ntot,'-k',label=r'$\mu^+$ L1')
-ax3.plot(d, 100*Nmu_L2/Ntot,'--r',label=r'$\mu^+$ L2')
-ax3.plot(d, 100*Nep_L3/Ntot,'-c',label=r'$e^+$ L3')
-ax3.plot(d, 100*Nep_L4/Ntot,'-m',label=r'$e^+$ L4')
-ax3.set_xlabel(r"$d \; \mathrm{[mm]}$")
-ax3.set_ylabel(r"Efficiency $N_{\rm Layer} / N_{\rm Events}$ in %")
-ax3.set_xlim(5, 40)
-ax3.set_ylim(0, 101)
-ax3.legend(loc=0)
-if SAVE_FIGS:
-    fig3.savefig("plots/Layer_efficiency.pdf")
+# fig3, ax3 = plotting_header(size="single")
+# ax3.plot(d, 100*Nmu_L1/Ntot,'-k',label=r'$\mu^+$ L1')
+# ax3.plot(d, 100*Nmu_L2/Ntot,'--r',label=r'$\mu^+$ L2')
+# ax3.plot(d, 100*Nep_L3/Ntot,'-c',label=r'$e^+$ L3')
+# ax3.plot(d, 100*Nep_L4/Ntot,'-m',label=r'$e^+$ L4')
+# ax3.set_xlabel(r"$d \; \mathrm{[mm]}$")
+# ax3.set_ylabel(r"Efficiency $N_{\rm Layer} / N_{\rm Events}$ in %")
+# ax3.set_xlim(5, 40)
+# ax3.set_ylim(0, 101)
+# ax3.legend(loc=0)
+# if SAVE_FIGS:
+#     fig3.savefig("plots/Layer_efficiency.pdf")
 
 
 
