@@ -68,6 +68,9 @@ def set_publication_style():
 
 # ---------------------------------------
 def plotting_header(size="single", dpi=200, minor_ticks=True):
+    # ------------------------
+    set_publication_style()
+    # ------------------------
     fig, ax = plt.subplots(figsize=FIG_SIZES[size], dpi=dpi, constrained_layout=True)
     for spine in ax.spines.values():
         spine.set_linewidth(mpl.rcParams["axes.linewidth"])
@@ -86,6 +89,9 @@ def plotting_joint_header(size="single", dpi=200):
         ax_main  : 2D histogram
         ax_right : Y marginal, horizontal, sharing Y with ax_main
     """
+    # ------------------------
+    set_publication_style()
+    # ------------------------
     fig = plt.figure(figsize=(3.35, 3.35), dpi=dpi)
     gs = GridSpec(2, 2, figure=fig, width_ratios=(4.0,0.8), height_ratios=(0.8,4.0), wspace=0.05, hspace=0.05)
     ax_top   = fig.add_subplot(gs[0, 0])
@@ -119,7 +125,6 @@ def Plot_L1_E_dep_mu_pos(arr, savefig=False):
     bin_centers = 0.5 * (bins[:-1] + bins[1:])
     h_mu_L1_edep, _ = np.histogram(dep_mu_L1, bins=bins)
     h_ep_L1_edep, _ = np.histogram(dep_ep_L1, bins=bins)
-    set_publication_style()
     fig, ax = plotting_header(size="single")
     ax.plot(bin_centers, h_mu_L1_edep, '-r', ds="steps-mid", label=r"$\mu^+$")
     ax.plot(bin_centers, h_ep_L1_edep, '-b', ds="steps-mid", label=r"$e^+$")
@@ -177,6 +182,38 @@ def Muon_Decay_Stop_Target(arr, figsave=False):
     if figsave:
         fig.savefig(f'plots/2d_XY_target_decay_d={int(dd)}mm.pdf')
 
+def Generate_XY_std_decay_inTarget():
+    d = [5.,10.,15.,20.,25.,30.,35.,40.]
+    with open('data/XY_std_decay_Target.dat', 'w') as ff:
+        ff.write('# d, std(X), std(Y)\n')
+        for dd in d:
+            with uproot.open(f"data/musr_d{int(dd)}mm_B0_0mT_N1e5.root")["t1"] as tree:
+                arr = tree.arrays(branches, library="ak")
+            hit_Target = (arr["muDecayDetID"] == TARGET_ID)
+            dec_targ_mu_X = ak.to_numpy((arr["muDecayPosX"][hit_Target]))
+            dec_targ_mu_Y = ak.to_numpy((arr["muDecayPosY"][hit_Target]))
+            ff.write(f'{dd:.2f},{dec_targ_mu_X.std():.2f},{dec_targ_mu_Y.std():.2f}\n')
+
+def Plot_XY_std_decay_inTarget(savefig=False):
+    XY_data = np.loadtxt('data/XY_std_decay_Target.dat', delimiter=',')
+    xd = np.linspace(0,45,100)
+    p_std_x = np.polyfit(XY_data[:,0],XY_data[:,1], 1)
+    p_std_y = np.polyfit(XY_data[:,0],XY_data[:,2], 1)
+    fit_std_x = np.poly1d(p_std_x)
+    fit_std_y = np.poly1d(p_std_y)
+    fig, ax = plotting_header(size="single")
+    ax.plot(XY_data[:,0],XY_data[:,1],'ok',ms=3,label='X-axis')
+    ax.plot(XY_data[:,0],XY_data[:,2],'dr',ms=3,label='Y-axis')
+    ax.plot(xd,fit_std_x(xd),'-k',lw=1,label=r'fit $\sigma(X)=%.3f d +%.2f$'%(p_std_x[0],p_std_x[1]))
+    ax.plot(xd,fit_std_y(xd),'--r',lw=1,label=r'fit $\sigma(Y)=%.3f d +%.2f$'%(p_std_y[0],p_std_y[1]))
+    ax.set_xlabel(r"$d \; \mathrm{[mm]}$")
+    ax.set_ylabel(r"Trasverse Spread of Stoped $\mu^+\; \mathrm{[mm]}$")
+    ax.set_xlim(0, 45)
+    ax.set_ylim(1.5, 3)
+    ax.legend(loc=0)
+    if savefig:
+        fig.savefig('plots/Muon_Decay_Target_Transverse_Spread.pdf')
+
 
 # ============================================================
 # Load ROOT data
@@ -227,36 +264,8 @@ with uproot.open(f"data/musr_d{int(dd)}mm_B0_0mT_N1e5.root")["t1"] as tree:
 
 #==============================================
 
-def Generate_XY_std_decay_inTarget():
-    d = [5.,10.,15.,20.,25.,30.,35.,40.]
-    with open('data/XY_std_decay_Target.dat', 'w') as ff:
-        ff.write('# d, std(X), std(Y)\n')
-        for dd in d:
-            with uproot.open(f"data/musr_d{int(dd)}mm_B0_0mT_N1e5.root")["t1"] as tree:
-                arr = tree.arrays(branches, library="ak")
-            hit_Target = (arr["muDecayDetID"] == TARGET_ID)
-            dec_targ_mu_X = ak.to_numpy((arr["muDecayPosX"][hit_Target]))
-            dec_targ_mu_Y = ak.to_numpy((arr["muDecayPosY"][hit_Target]))
-            ff.write(f'{dd:.2f},{dec_targ_mu_X.std():.2f},{dec_targ_mu_Y.std():.2f}\n')
 
+# Generate_XY_std_decay_inTarget()
 
-# def Plot_XY_std_decay_inTarget(savefig=False)
-XY_data = np.loadtxt('data/XY_std_decay_Target.dat', delimiter=',')
-
-xd = np.linspace(0,45,100)
-p_std_x = np.polyfit(XY_data[:,0],XY_data[:,1], 1)
-p_std_y = np.polyfit(XY_data[:,0],XY_data[:,2], 1)
-fit_std_x = np.poly1d(p_std_x)
-fit_std_y = np.poly1d(p_std_y)
-
-plt.plot(XY_data[:,0],XY_data[:,1],'ok',label='std(X)')
-plt.plot(XY_data[:,0],XY_data[:,2],'or',label='std(y)')
-plt.plot(xd,fit_std_x(xd),'-k',label='fit std(X)')
-plt.plot(xd,fit_std_y(xd),'-r',label='fit std(y)')
-
-
-
-
-
-
+Plot_XY_std_decay_inTarget(savefig=0)
 
