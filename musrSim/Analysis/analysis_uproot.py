@@ -134,7 +134,7 @@ def Plot_L1_E_dep_mu_pos(arr, savefig=False):
     ax.set_ylim(bottom=0)
     ax.legend(loc=0)
     if savefig:
-        fig.savefig('plots/Energy_Deposit_L1.pdf')
+        fig.savefig('../plots/Energy_Deposit_L1.pdf')
 
 # **********************************************************
 # **********************************************************
@@ -157,7 +157,7 @@ def Muon_Decay_Stop_Target(arr, figsave=False):
     ax.set_yscale('log')
     ax.legend(loc=0)
     if figsave:
-        fig.savefig('plots/Z_target_decay.pdf')
+        fig.savefig('../plots/Z_target_decay.pdf')
     # --------------------------------------
     bins = np.linspace(-10.1, 10.1, 150 + 1)
     bin_centers = 0.5 * (bins[:-1] + bins[1:])
@@ -180,11 +180,11 @@ def Muon_Decay_Stop_Target(arr, figsave=False):
     ax_right.set_xlim(left=0)
     fig.align_labels()
     if figsave:
-        fig.savefig(f'plots/2d_XY_target_decay_d={int(dd)}mm.pdf')
+        fig.savefig(f'../plots/2d_XY_target_decay_d={int(dd)}mm.pdf')
 
 def Generate_XY_std_decay_inTarget():
     d = [5.,10.,15.,20.,25.,30.,35.,40.]
-    with open('data/XY_std_decay_Target.dat', 'w') as ff:
+    with open('../data/XY_std_decay_Target.dat', 'w') as ff:
         ff.write('# d, std(X), std(Y)\n')
         for dd in d:
             with uproot.open(f"data/musr_d{int(dd)}mm_B0_0mT_N1e5.root")["t1"] as tree:
@@ -212,7 +212,7 @@ def Plot_XY_std_decay_inTarget(savefig=False):
     ax.set_ylim(1.5, 3)
     ax.legend(loc=0)
     if savefig:
-        fig.savefig('plots/Muon_Decay_Target_Transverse_Spread.pdf')
+        fig.savefig('../plots/Muon_Decay_Target_Transverse_Spread.pdf')
 
 
 # ============================================================
@@ -247,7 +247,7 @@ branches = ["muDecayDetID","muDecayPosX","muDecayPosY","muDecayPosZ","det_ID",
 # d = [5.,10.,15.,20.,25.,30.,35.,40.]
 dd = 20
 
-with uproot.open(f"data/musr_d{int(dd)}mm_B0_0mT_N1e5.root")["t1"] as tree:
+with uproot.open(f"../data/musr_d{int(dd)}mm_B0_0mT_N1e5.root")["t1"] as tree:
     arr = tree.arrays(branches, library="ak")
 
 ###############################################
@@ -262,10 +262,12 @@ with uproot.open(f"data/musr_d{int(dd)}mm_B0_0mT_N1e5.root")["t1"] as tree:
 #==============================================
 # Muon_Decay_Stop_Target(arr, figsave=0)
 
-#==============================================
-
-
 # Generate_XY_std_decay_inTarget()
 
-Plot_XY_std_decay_inTarget(savefig=0)
+# Plot_XY_std_decay_inTarget(savefig=0)
 
+#==============================================
+
+###############################################
+# 
+#==============================================
