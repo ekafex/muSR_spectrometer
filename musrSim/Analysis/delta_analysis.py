@@ -280,7 +280,7 @@ def Save_Plot_Deltas(d:list, DELTA_MAX:float=5.0, N_BINS:int=150, SAVE_FIGURE:bo
             # Uncomment if tails matter:
             # ax.set_yscale("log")
             if SAVE_FIGURE:
-                fig.savefig(f"plots/delta_mu_e/delta_d{int(dd)}mm.pdf")
+                fig.savefig(f"plots/SIMULATION_1/delta_mu_e/delta_d{int(dd)}mm.pdf")
             plt.show()
             plt.close(fig)
             #---------------
@@ -352,7 +352,7 @@ ax1.set_xlim(0, 45)
 ax1.set_ylim(0, 1.5)
 ax1.legend(loc=2)
 if SAVE_FIGS:
-    fig1.savefig("plots/Std_deltas.pdf")
+    fig1.savefig("plots/SIMULATION_1/Std_deltas.pdf")
 
 p_mean_mu = np.polyfit(d, dmu_mean, 1)
 p_mean_ep = np.polyfit(d, dep_mean, 1)
@@ -370,7 +370,7 @@ ax2.set_xlim(0, 45)
 ax2.set_ylim(0, 1.6)
 ax2.legend(loc=0)
 if SAVE_FIGS:
-    fig2.savefig("plots/Mean_deltas.pdf")
+    fig2.savefig("plots/SIMULATION_1/Mean_deltas.pdf")
 
 
 # =====================================================================
@@ -399,7 +399,7 @@ if SAVE_FIGS:
 # ax3.set_ylim(0, 101)
 # ax3.legend(loc=0)
 # if SAVE_FIGS:
-#     fig3.savefig("plots/Layer_efficiency.pdf")
+#     fig3.savefig("plots/SIMULATION_1/Layer_efficiency.pdf")
 
 
 

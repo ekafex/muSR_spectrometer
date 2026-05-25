@@ -134,7 +134,7 @@ def Plot_L1_E_dep_mu_pos(arr, savefig=False):
     ax.set_ylim(bottom=0)
     ax.legend(loc=0)
     if savefig:
-        fig.savefig('../plots/Energy_Deposit_L1.pdf')
+        fig.savefig('../plots/SIMULATION_1/Energy_Deposit_L1.pdf')
 
 # **********************************************************
 # **********************************************************
@@ -157,7 +157,7 @@ def Muon_Decay_Stop_Target(arr, figsave=False):
     ax.set_yscale('log')
     ax.legend(loc=0)
     if figsave:
-        fig.savefig('../plots/Z_target_decay.pdf')
+        fig.savefig('../plots/SIMULATION_1/Z_target_decay.pdf')
     # --------------------------------------
     bins = np.linspace(-10.1, 10.1, 150 + 1)
     bin_centers = 0.5 * (bins[:-1] + bins[1:])
@@ -180,7 +180,7 @@ def Muon_Decay_Stop_Target(arr, figsave=False):
     ax_right.set_xlim(left=0)
     fig.align_labels()
     if figsave:
-        fig.savefig(f'../plots/2d_XY_target_decay_d={int(dd)}mm.pdf')
+        fig.savefig(f'../plots/SIMULATION_1/2d_XY_target_decay_d={int(dd)}mm.pdf')
 
 def Generate_XY_std_decay_inTarget():
     d = [5.,10.,15.,20.,25.,30.,35.,40.]
@@ -212,7 +212,7 @@ def Plot_XY_std_decay_inTarget(savefig=False):
     ax.set_ylim(1.5, 3)
     ax.legend(loc=0)
     if savefig:
-        fig.savefig('../plots/Muon_Decay_Target_Transverse_Spread.pdf')
+        fig.savefig('../plots/SIMULATION_1/Muon_Decay_Target_Transverse_Spread.pdf')
 
 
 # ============================================================

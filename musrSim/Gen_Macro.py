@@ -609,12 +609,12 @@ Detect = {'ID':{'L1':101, 'L2':102, 'L3':103, 'L4':104},       # Layers IDs
          }
 
 
-Targ= {'diameter':6.,'thickness':1.0,                         # Target/Sample diameter and thickness (modeled as cylinder)
+Targ= {'diameter':10.,'thickness':1.0,                         # Target/Sample diameter and thickness (modeled as cylinder)
        'Material':'G4_Al','z':0.}                              # Target/Sample material and offset from z=0 center
 
 Magnet={'l':10.,'w':2.,'h':10.,'x':0.,'y':15.,'z':0.,          # Permanent magnet dimensions and position
         'Material':'G4_Fe',                                    # Permanent magnet material
-        'B_field':[0, 6.3e-3, 0],                              # Permanent magnet magnetic field vector
+        'B_field':[0, 0*6.3e-3, 0],                              # Permanent magnet magnetic field vector
         'field_box':{'l':30.,'w':30.,'h':30.}                  # Permanent magnet field box distribution
         }
 

@@ -11,6 +11,7 @@ import awkward as ak
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 from matplotlib.ticker import AutoMinorLocator
+from matplotlib.gridspec import GridSpec
 
 from scipy.optimize import curve_fit
 
@@ -90,40 +91,328 @@ def plotting_header(size="single", dpi=200, minor_ticks=True):
         ax.yaxis.set_minor_locator(AutoMinorLocator())
     return fig, ax
 
+
+def plotting_joint_header(size="single", dpi=200):
+    """
+    Compact jointplot-like layout:
+        ax_top   : X marginal
+        ax_main  : 2D histogram
+        ax_right : Y marginal, horizontal, sharing Y with ax_main
+    """
+    # ------------------------
+    set_publication_style()
+    # ------------------------
+    fig = plt.figure(figsize=(3.35, 3.35), dpi=dpi)
+    gs = GridSpec(2, 2, figure=fig, width_ratios=(4.0,0.8), height_ratios=(0.8,4.0), wspace=0.05, hspace=0.05)
+    ax_top   = fig.add_subplot(gs[0, 0])
+    ax_main  = fig.add_subplot(gs[1, 0], sharex=ax_top)
+    ax_right = fig.add_subplot(gs[1, 1], sharey=ax_main)
+    # Make marginal panels visually minimal
+    ax_top.set_axis_off()
+    ax_right.set_axis_off()
+    ax_top.set_facecolor("none")
+    ax_right.set_facecolor("none")
+    for spine in ax_main.spines.values():
+        spine.set_linewidth(mpl.rcParams["axes.linewidth"])
+    ax_main.tick_params(axis="both", which="both", direction="in", top=True, right=True)
+    ax_main.minorticks_on()
+    ax_main.xaxis.set_minor_locator(AutoMinorLocator())
+    ax_main.yaxis.set_minor_locator(AutoMinorLocator())
+    # Important: keep main image physically square
+    ax_main.set_aspect("equal", adjustable="box")
+    return fig, ax_main, ax_top, ax_right
+
+
 # ============================================================
 # Helper functions
 # ============================================================
 
-def first_by_time(values, times, mask):
+def first_hit_quantity(awk_arr, hit_mask, quantity):
     """
-    Return first value per event after applying a jagged mask and sorting by time.
-    values, times, mask are jagged arrays with same structure.
+    Return the earliest selected hit quantity per event.
+
+    hit_mask must be a jagged hit-level mask with the same structure as det_ID.
+    Output is event-level: one value per event, or None if no selected hit exists.
     """
-    selected_values = values[mask]
-    selected_times = times[mask]
+    selected_values = awk_arr[quantity][hit_mask]
+    selected_times  = awk_arr["det_time_start"][hit_mask]
     order = ak.argsort(selected_times, axis=1)
     selected_values = selected_values[order]
     return ak.firsts(selected_values)
 
 
-def first_hit_quantity(a, hit_mask, quantity):
-    return first_by_time(a[quantity], a["det_time_start"], hit_mask)
+def Mask_Particle_Track_2Layers_Hits(awk_arr, D1_ID, D2_ID, PID):
+    """
+    Build hit-level masks for a particle crossing two detector layers,
+    plus event-level masks telling whether each layer has at least one hit.
+    """
+    is_particle = (awk_arr["det_VrtxParticleID"] == PID)
+    D1_hit_mask = (awk_arr["det_ID"] == D1_ID) & is_particle
+    D2_hit_mask = (awk_arr["det_ID"] == D2_ID) & is_particle
+    has_hit_D1 = ak.num(awk_arr["det_ID"][D1_hit_mask], axis=1) > 0
+    has_hit_D2 = ak.num(awk_arr["det_ID"][D2_hit_mask], axis=1) > 0
+    has_track = has_hit_D1 & has_hit_D2
+    return D1_hit_mask, D2_hit_mask, has_hit_D1, has_hit_D2, has_track
 
 
-def has_hit(awk_arr, hit_mask):
-    return ak.num(awk_arr["det_ID"][hit_mask], axis=1) > 0
+def first_Hits_Coordinates(awk_arr, hit_mask):
+    hit_t = first_hit_quantity(awk_arr, hit_mask, "det_time_start")
+    hit_x = first_hit_quantity(awk_arr, hit_mask, "det_x")
+    hit_y = first_hit_quantity(awk_arr, hit_mask, "det_y")
+    hit_z = first_hit_quantity(awk_arr, hit_mask, "det_z")
+    return hit_t, hit_x, hit_y, hit_z
 
+def Track_Extrapolation(awk_arr, D1_ID, D2_ID, PID, ztarg):
+    """
+    Build a two-layer tracklet for a given particle PID and extrapolate to ztarg.
+
+    Returns
+    -------
+    t_rec : event-level array
+        Reconstructed track time.
+    x_ext, y_ext : event-level arrays
+        Extrapolated coordinates at z = ztarg.
+    has_track : event-level bool array
+        True if both layers have at least one selected hit.
+    """
+
+    D1_hit_mask, D2_hit_mask, has_hit_D1, has_hit_D2, has_track = (
+        Mask_Particle_Track_2Layers_Hits(awk_arr, D1_ID, D2_ID, PID)
+    )
+    D1t, D1x, D1y, D1z = first_Hits_Coordinates(awk_arr, D1_hit_mask)
+    D2t, D2x, D2y, D2z = first_Hits_Coordinates(awk_arr, D2_hit_mask)
+    t_rec = 0.5 * (D1t + D2t)
+    x_ext, y_ext = extrapolate_to_z(D1x, D1y, D1z, D2x, D2y, D2z, ztarg)
+    return t_rec, x_ext, y_ext, has_track
 
 def extrapolate_to_z(x1, y1, z1, x2, y2, z2, z_sample=0.0):
-    alpha = (z_sample - z1) / (z2 - z1)
+    dz = z2 - z1
+    alpha = (z_sample - z1) / dz
     x = x1 + alpha * (x2 - x1)
     y = y1 + alpha * (y2 - y1)
     return x, y
 
-
 def dist_xy(xa, ya, xb, yb):
     return np.sqrt((xa - xb)**2 + (ya - yb)**2)
 
+
+def muSR_spectrum_Ideal(awk_arr):
+    mask_truth_target = ((awk_arr["muDecayDetID"] == TARGET_ID)
+        & np.isfinite(ak.to_numpy(awk_arr["muTargetTime"]))
+        & np.isfinite(ak.to_numpy(awk_arr["muDecayTime"])))
+    #--------------------------------
+    dt_truth = awk_arr["muDecayTime"] - awk_arr["muTargetTime"]
+    #--------------------------------
+    mask_truth_time     = (dt_truth > 0) & (dt_truth < TGATE)
+    mask_truth          = mask_truth_target & mask_truth_time
+    mask_pos_up_truth   = awk_arr["posIniMomZ"] < 0
+    mask_pos_down_truth = awk_arr["posIniMomZ"] > 0
+    #--------------------------------
+    dt_truth_up   = ak.to_numpy(dt_truth[mask_truth & mask_pos_up_truth])
+    dt_truth_down = ak.to_numpy(dt_truth[mask_truth & mask_pos_down_truth])
+    return dt_truth_up, dt_truth_down
+    
+
+def muSR_spectrum(awk_arr, d_match, Detector_IDs, PIDs, TargetID, Gate_open_time, Z_target_extrap):
+    D1, D2, D3, D4 = Detector_IDs
+    PID_MU, PID_E  = PIDs
+    mask_mu_stops_target = awk_arr["muDecayDetID"] == TargetID
+    #--------------------------------
+    t_mu_rec, x_mu_ext, y_mu_ext, mu_has_track = Track_Extrapolation(awk_arr, D1, D2, PID_MU, Z_target_extrap)
+    t_pos_up_rec, x_pos_up_ext, y_pos_up_ext, pos_up_has_track = Track_Extrapolation(awk_arr, D1, D2, PID_E, Z_target_extrap)
+    t_pos_down_rec, x_pos_down_ext, y_pos_down_ext, pos_down_has_track = Track_Extrapolation(awk_arr, D3, D4, PID_E, Z_target_extrap)
+    #--------------------------------
+    dt_up_rec = t_pos_up_rec - t_mu_rec
+    dt_down_rec = t_pos_down_rec - t_mu_rec
+    #--------------------------------
+    dmatch_up = dist_xy(x_mu_ext, y_mu_ext, x_pos_up_ext, y_pos_up_ext)
+    dmatch_down = dist_xy(x_mu_ext, y_mu_ext,x_pos_down_ext, y_pos_down_ext)
+    #--------------------------------
+    mask_rec_up = (mu_has_track & pos_up_has_track & mask_mu_stops_target
+        & (dmatch_up <= d_match) & (dt_up_rec > 0) & (dt_up_rec < Gate_open_time))
+    mask_rec_down = (mu_has_track & pos_down_has_track & mask_mu_stops_target
+        & (dmatch_down <= d_match) & (dt_down_rec > 0) & (dt_down_rec < Gate_open_time))
+    #--------------------------------
+    dt_up_selected = ak.to_numpy(dt_up_rec[mask_rec_up])
+    dt_down_selected = ak.to_numpy(dt_down_rec[mask_rec_down])
+    #--------------------------------
+    return dt_up_selected, dt_down_selected, mask_rec_up, mask_rec_down
+
+
+def musrSpec(t, N0, A, B, omega, phi, sigma):
+    tau_mu = 2.197 # us muon lifetime
+    # B_mag_y= 6.3e-3# T
+    return N0*np.exp(-t/tau_mu)*(1+A*np.cos(omega*t+phi)*np.exp(-(sigma*t)**2/2)) + B
+
+def musrSpec1(t, N0, A, B, omega, phi):
+    tau_mu = 2.197 # us muon lifetime
+    # B_mag_y= 6.3e-3# T
+    return N0*np.exp(-t/tau_mu)*(1 + A*np.cos(omega*t+phi)) + B
+
+def musrSpec2(t, N0, A, omega, phi):
+    tau_mu = 2.197 # us muon lifetime
+    # B_mag_y= 6.3e-3# T
+    return N0*np.exp(-t/tau_mu)*(1 + A*np.cos(omega*t+phi))
+
+
+
+def fit_plot_spectrum(dt_up, dt_down, time_thresh, gate_time, fname, Fit_B_sigma, savefig=False):
+    bins = np.linspace(0, gate_time, 201)
+    centers = 0.5 * (bins[:-1] + bins[1:])
+    counts_up,   _ = np.histogram(dt_up,   bins=bins)
+    counts_down, _ = np.histogram(dt_down, bins=bins)
+    #--------------------------------
+    yerrors_up   = np.sqrt(np.maximum(counts_up, 1))
+    yerrors_down = np.sqrt(np.maximum(counts_down, 1))
+    #--------------------------------
+    if Fit_B_sigma == 1:
+        # N0, A, B, omega, phi, sigma
+        Bounds =([1,-1,0,0.1,-np.pi,0],[1e5,1,100,10,np.pi,1])
+        ic = centers > time_thresh
+        popt_up, pcov_up      = curve_fit(musrSpec, centers[ic],   counts_up[ic], p0=[153.,-0.29, 0.46,5.34,-1.6,0.], bounds=Bounds)
+        popt_down, pcov_down  = curve_fit(musrSpec, centers[ic], counts_down[ic], p0=[153.,-0.35, 0.36,5.34, 1.6,0.], bounds=Bounds)
+        N0_up,     A_up,   B_up,   omega_up,   phi_up,   sigma_up = popt_up
+        N0_down, A_down, B_down, omega_down, phi_down, sigma_down = popt_down
+        txt = f'''
+        param | Upstream | Downstream |
+        ===============================
+        N0    | {N0_up:.3f}  | {N0_down:.3f}    |
+        A     | {A_up:.3f}   | {A_down:.3f}     |
+        B     | {B_up:.3f}    | {B_down:.3f}     |
+        omega | {omega_up:.3f}    | {omega_down:.3f}      |
+        phi   | {phi_up:.3f}   | {phi_down:.3f}      |
+        sigma | {sigma_up:.3f}    | {sigma_down:.3f}      |
+        '''
+    #----------------------------------------------------------
+    elif Fit_B_sigma == 2:
+        # N0, A, B, omega, phi (no sigma)
+        Bounds =([1,-1,0,0.1,-np.pi],[1e5,1,100,10,np.pi])
+        ic = centers > time_thresh
+        popt_up, pcov_up      = curve_fit(musrSpec1, centers[ic],   counts_up[ic], p0=[153.,-0.29, 0.46,5.34,-1.6], bounds=Bounds)
+        popt_down, pcov_down  = curve_fit(musrSpec1, centers[ic], counts_down[ic], p0=[153.,-0.35, 0.36,5.34, 1.6], bounds=Bounds)
+        N0_up,     A_up,   B_up,   omega_up,   phi_up = popt_up
+        N0_down, A_down, B_down, omega_down, phi_down = popt_down
+        txt = f'''
+        param | Upstream | Downstream |
+        ===============================
+        N0    | {N0_up:.3f}  | {N0_down:.3f}    |
+        A     | {A_up:.3f}   | {A_down:.3f}     |
+        B     | {B_up:.3f}    | {B_down:.3f}     |
+        omega | {omega_up:.3f}    | {omega_down:.3f}      |
+        phi   | {phi_up:.3f}   | {phi_down:.3f}      |
+        '''
+    #----------------------------------------------------------
+    else:
+        # N0, A, omega, phi (no B and no sigma)
+        Bounds=([1,-1,0.1,-np.pi],[1e5,1,10,np.pi])
+        ic = centers > time_thresh
+        popt_up, pcov_up      = curve_fit(musrSpec2, centers[ic],   counts_up[ic], p0=[153.,-0.29, 5.34,-1.6], bounds=Bounds)
+        popt_down, pcov_down  = curve_fit(musrSpec2, centers[ic], counts_down[ic], p0=[153.,-0.35, 5.34, 1.6], bounds=Bounds)
+        N0_up,     A_up, omega_up,   phi_up = popt_up
+        N0_down, A_down, omega_down, phi_down = popt_down
+        txt = f'''
+        param | Upstream | Downstream |
+        ===============================
+        N0    | {N0_up:.3f}  | {N0_down:.3f}    |
+        A     | {A_up:.3f}   | {A_down:.3f}     |
+        omega | {omega_up:.3f}    | {omega_down:.3f}      |
+        phi   | {phi_up:.3f}   | {phi_down:.3f}      |
+        '''
+    #----------------------------------------------------------
+    # print fit parameters
+    print(txt)
+    #----------------------------------------------------------
+    tt = np.linspace(0, gate_time, 300)
+    fig, ax = plotting_header(size="single")
+    ax.errorbar(centers,counts_up/N0_up,yerr=yerrors_up/N0_up, lw=0.8, c='k', fmt="o", ms=1.5, label='Upstream')
+    ax.errorbar(centers,counts_down/N0_down,yerr=yerrors_down/N0_down, lw=0.8, c='r', fmt="^", ms=1.5, label='Downstream')
+    if Fit_B_sigma == 1:
+        ax.plot(tt, musrSpec(tt, N0_up,     A_up,   B_up,   omega_up,   phi_up,   sigma_up)/N0_up,  '-c', lw=1, label='Upstream fit')
+        ax.plot(tt, musrSpec(tt, N0_down, A_down, B_down, omega_down, phi_down, sigma_down)/N0_down,'-b', lw=1, label='Downstream fit')
+    elif Fit_B_sigma == 2:
+        ax.plot(tt, musrSpec1(tt,   N0_up,   A_up,   B_up,   omega_up,   phi_up)/N0_up,  '-c', lw=1, label='Upstream fit')
+        ax.plot(tt, musrSpec1(tt, N0_down, A_down, B_down, omega_down, phi_down)/N0_down,'-b', lw=1, label='Downstream fit')
+    else:
+        ax.plot(tt, musrSpec2(tt,   N0_up,   A_up,   omega_up,   phi_up)/N0_up,  '-c', lw=1, label='Upstream fit')
+        ax.plot(tt, musrSpec2(tt, N0_down, A_down, omega_down, phi_down)/N0_down,'-b', lw=1, label='Downstream fit')
+    ax.set_xlabel(r"$t \; {\rm [\mu\,s]}$")
+    ax.set_ylabel(r"$N(t)/N_0$")
+    ax.set_xlim(0,8)
+    ax.set_ylim(bottom=0)
+    ax.legend(loc=0)
+    plt.show()
+    if savefig:
+        fig.savefig('../plots/SIMULATION_2/'+fname)
+
+
+def Plot_Asymmetry(dt_up, dt_down, gate_time, fname, NBINS=200, savefig=False):
+    bins = np.linspace(0, gate_time, NBINS+1)
+    centers = 0.5 * (bins[:-1] + bins[1:])
+    counts_up,   _ = np.histogram(dt_up,   bins=bins)
+    counts_down, _ = np.histogram(dt_down, bins=bins)
+    alpha = counts_up.sum()/counts_down.sum()    
+    #------------------------------------------------
+    num = counts_up - alpha * counts_down
+    den = counts_up + alpha * counts_down
+    A = np.full_like(den, np.nan, dtype=float)
+    mask_nonzero = den > 0
+    A[mask_nonzero] = num[mask_nonzero]/den[mask_nonzero]
+    fig, ax = plotting_header(size="single")
+    ax.plot(centers, A, '-ok', ms=3,label=r'$\alpha=%.3f$'%alpha)
+    ax.set_xlabel(r"$t \; {\rm [\mu\,s]}$")
+    ax.set_ylabel(r"$A(t)=\frac{N_{\rm up}-\alpha N_{\rm down}}{N_{\rm up}+\alpha N_{\rm down}}$")
+    ax.set_xlim(0, 8)
+    ax.set_ylim(-1,1)
+    ax.legend(loc=0)
+    plt.show()
+    if savefig:
+        fig.savefig('../plots/SIMULATION_2/'+fname)
+
+
+def Muon_Decay_Stop_Target(arr, savefig=False):
+    hit_Target = (arr["muDecayDetID"] == TARGET_ID)
+    dec_targ_mu_X = ak.to_numpy((arr["muDecayPosX"][hit_Target]))
+    dec_targ_mu_Y = ak.to_numpy((arr["muDecayPosY"][hit_Target]))
+    dec_targ_mu_Z = ak.to_numpy((arr["muDecayPosZ"][hit_Target]))
+    # -------------------------------------
+    bins = np.linspace(-0.51, 0.51, 200 + 1)
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+    h_stop_Z, _ = np.histogram(dec_targ_mu_Z, bins=bins)
+    fig, ax = plotting_header(size="single")
+    ax.plot(bin_centers, h_stop_Z, '-k', ds="steps-mid", label=r"$\mu^+$ in Target")
+    ax.set_xlabel(r"Z-Axis Decay $\mathrm{[mm]}$")
+    ax.set_ylabel("Counts")
+    ax.set_xlim(-0.5, 0.5)
+    ax.set_ylim(1,7e3)
+    #ax.set_yscale('log')
+    ax.legend(loc=0)
+    #plt.show()
+    if savefig:
+        fig.savefig('../plots/SIMULATION_2/Z_target_decay_B6_3mT.pdf')
+    # --------------------------------------
+    bins = np.linspace(-10.1, 10.1, 150 + 1)
+    bin_centers = 0.5 * (bins[:-1] + bins[1:])
+    h_stop_X, _ = np.histogram(dec_targ_mu_X, bins=bins)
+    h_stop_Y, _ = np.histogram(dec_targ_mu_Y, bins=bins)
+    h_stop_XY,_,_ = np.histogram2d(dec_targ_mu_X, dec_targ_mu_Y, bins=bins)
+    fig, ax, ax_top, ax_right = plotting_joint_header(size="double")
+    ax.imshow(h_stop_XY.T,cmap='Greys',interpolation='nearest',
+              origin='lower',extent=[-10,10,-10,10], vmax=80)
+    ax.hlines(0,-10,10,ls='--',color='k',lw=0.3,alpha=0.3)
+    ax.vlines(0,-10,10,ls='--',color='k',lw=0.3,alpha=0.3)
+    ax_top.plot(bin_centers, h_stop_X,  '-k', lw=0.8)
+    ax_right.plot(h_stop_Y, bin_centers,'-k', lw=0.8)
+    ax.text(-9,8,r'$\mu^+$ Decay in Target')
+    ax.set_xlabel(r"X-Axis $\mathrm{[mm]}$")
+    ax.set_ylabel(r"Y-Axis $\mathrm{[mm]}$")
+    ax.set_xlim(-10, 10)
+    ax.set_ylim(-10, 10)
+    ax_top.set_ylim(bottom=0)
+    ax_right.set_xlim(left=0)
+    fig.align_labels()
+    #plt.show()
+    if savefig:
+        fig.savefig(f'../plots/SIMULATION_2/2d_XY_target_decay_B6_3mT.pdf')
 
 # ============================================================
 # Load ROOT data
@@ -150,20 +439,6 @@ def dist_xy(xa, ya, xb, yb):
 # =====================================================================
 # =====================================================================
 
-def musrSpec(t, N0, A, B, omega, phi, sigma):
-    tau_mu = 2.197 # us muon lifetime
-    # B_mag_y= 6.3e-3# T
-    return N0*np.exp(-t/tau_mu)*(1+A*np.cos(omega*t+phi)*np.exp(-(sigma*t)**2/2)) + B
-
-def musrSpec1(t, N0, A, B, omega, phi):
-    tau_mu = 2.197 # us muon lifetime
-    # B_mag_y= 6.3e-3# T
-    return N0*np.exp(-t/tau_mu)*(1 + A*np.cos(omega*t+phi)) + B
-
-def musrSpec2(t, N0, A, omega, phi):
-    tau_mu = 2.197 # us muon lifetime
-    # B_mag_y= 6.3e-3# T
-    return N0*np.exp(-t/tau_mu)*(1 + A*np.cos(omega*t+phi))
 
 
 branches = ['eventID',
@@ -178,285 +453,73 @@ with uproot.open("../data/musr_TargetD6mm_d20mm_B6_3mT_N1e5.root")["t1"] as tree
     arr = tree.arrays(branches, library="ak")
 
 
-# savefig = 0
 
-# mask_truth_target = (
-#     (arr["muDecayDetID"] == TARGET_ID)
-#     & np.isfinite(ak.to_numpy(arr["muTargetTime"]))
-#     & np.isfinite(ak.to_numpy(arr["muDecayTime"]))
-# )
-
-# dt_truth = arr["muDecayTime"] - arr["muTargetTime"]
-
-# mask_truth_time = (dt_truth > 0) & (dt_truth < TGATE)
-# mask_truth = mask_truth_target & mask_truth_time
-
-# mask_pos_up_truth = arr["posIniMomZ"] < 0
-# mask_pos_down_truth = arr["posIniMomZ"] > 0
-
-# dt_truth_up = ak.to_numpy(dt_truth[mask_truth & mask_pos_up_truth])
-# dt_truth_down = ak.to_numpy(dt_truth[mask_truth & mask_pos_down_truth])
-
-# bins = np.linspace(0, TGATE, 261)
-# counts_truth_up, edges   = np.histogram(dt_truth_up, bins=bins)
-# counts_truth_down, edges = np.histogram(dt_truth_down, bins=bins)
-# centers = 0.5 * (edges[:-1] + edges[1:])
-
-# yerrors_up   = np.sqrt(np.maximum(counts_truth_up, 1))
-# yerrors_down = np.sqrt(np.maximum(counts_truth_down, 1))
+Detector_IDs = [DET_L1, DET_L2, DET_L3, DET_L4]
+PIDs = [PID_MUP, PID_POS]
 
 
-# # N0, A, B, omega, phi, sigma
-# popt_up, pcov_up  = curve_fit(musrSpec, centers, counts_truth_up, p0=[750.,9,3,1,0.1,0.3])
-# popt_down, pcov_down  = curve_fit(musrSpec, centers, counts_truth_down, p0=[750.,9,3,1,0.1,0.3])
+savefig = 1
+Fit_B_sigma = 3
+Tthresh = 0.1
+statistics = 1
+NBINS = 200
 
-# N0_up, A_up, B_up, omega_up, phi_up, sigma_up = popt_up
-# N0_down, A_down, B_down, omega_down, phi_down, sigma_down = popt_down
-# tt = np.linspace(0,10,300)
+fname_ideal = 'vx_muSR_spectrum_ideal.pdf'
+dt_up_ideal, dt_down_ideal = muSR_spectrum_Ideal(arr)
+fit_plot_spectrum(dt_up_ideal, dt_down_ideal, Tthresh, TGATE, fname_ideal, Fit_B_sigma, savefig)
+    
 
-
-# fig, ax = plotting_header(size="single")
-# ax.errorbar(centers,counts_truth_up/N0_up,yerr=yerrors_up/N0_up, lw=0.8, c='k', fmt="o", ms=1.5, label='Upstream')
-# ax.plot(tt, musrSpec(tt, N0_up, A_up, B_up, omega_up, phi_up, sigma_up)/N0_up,'-k',lw=1)
-# ax.errorbar(centers,counts_truth_down/N0_down,yerr=yerrors_down/N0_down, lw=0.8, c='r', fmt="^", ms=1.5, label='Downstream')
-# ax.plot(tt, musrSpec(tt, N0_down, A_down, B_down, omega_down, phi_down, sigma_down)/N0_down,'-r',lw=1)
-# ax.set_xlabel(r"$t \; {\rm [\mu\,s]}$")
-# ax.set_ylabel(r"$N(t)/N_0$")
-# ax.set_xlim(0,8)
-# ax.set_ylim(bottom=0)
-# ax.legend(loc=0)
-# if savefig:
-#     fig.savefig('../plots/vx_muSR_spectrum_ideal.pdf')
-
-
-
-
-
-savefig = 0
-
-beam_radius_cut = 5.0  # mm, equivalent to 4 mm diameter
-
-is_mup = (arr["det_VrtxParticleID"] == PID_MUP)
-mask_mu_stops_target = (arr["muDecayDetID"] == TARGET_ID)
-mu_L1_mask = (arr["det_ID"] == DET_L1) & is_mup
-mu_L2_mask = (arr["det_ID"] == DET_L2) & is_mup
-
-has_mu_L1  = has_hit(arr, mu_L1_mask)
-has_mu_L2  = has_hit(arr, mu_L2_mask)
-
-has_mu_track = has_mu_L1 & has_mu_L2
-
-mu_L1_t = first_hit_quantity(arr, mu_L1_mask, "det_time_start")
-mu_L1_x = first_hit_quantity(arr, mu_L1_mask, "det_x")
-mu_L1_y = first_hit_quantity(arr, mu_L1_mask, "det_y")
-mu_L1_z = first_hit_quantity(arr, mu_L1_mask, "det_z")
-mu_L2_t = first_hit_quantity(arr, mu_L2_mask, "det_time_start")
-mu_L2_x = first_hit_quantity(arr, mu_L2_mask, "det_x")
-mu_L2_y = first_hit_quantity(arr, mu_L2_mask, "det_y")
-mu_L2_z = first_hit_quantity(arr, mu_L2_mask, "det_z")
-
-
-t_mu_rec = 0.5 * (mu_L1_t + mu_L2_t)
-xmu_ext, ymu_ext = extrapolate_to_z(mu_L1_x, mu_L1_y, mu_L1_z, mu_L2_x, mu_L2_y, mu_L2_z, Z_TARGET)
-
-
-mask_beam_region = np.sqrt(mu_L1_x**2 + mu_L1_y**2) < beam_radius_cut
-
-#=================================
-
-
-is_pos = arr["det_VrtxParticleID"] == PID_POS
-pos_L1_mask = (arr["det_ID"] == DET_L1) & is_pos
-pos_L2_mask = (arr["det_ID"] == DET_L2) & is_pos
-pos_L3_mask = (arr["det_ID"] == DET_L3) & is_pos
-pos_L4_mask = (arr["det_ID"] == DET_L4) & is_pos
-
-has_pos_L1 = has_hit(arr, pos_L1_mask)
-has_pos_L2 = has_hit(arr, pos_L2_mask)
-has_pos_L3 = has_hit(arr, pos_L3_mask)
-has_pos_L4 = has_hit(arr, pos_L4_mask)
-
-has_pos_up_track = has_pos_L1 & has_pos_L2
-has_pos_down_track = has_pos_L3 & has_pos_L4
-
-pos_L1_t = first_hit_quantity(arr, pos_L1_mask, "det_time_start")
-pos_L1_x = first_hit_quantity(arr, pos_L1_mask, "det_x")
-pos_L1_y = first_hit_quantity(arr, pos_L1_mask, "det_y")
-pos_L1_z = first_hit_quantity(arr, pos_L1_mask, "det_z")
-pos_L2_t = first_hit_quantity(arr, pos_L2_mask, "det_time_start")
-pos_L2_x = first_hit_quantity(arr, pos_L2_mask, "det_x")
-pos_L2_y = first_hit_quantity(arr, pos_L2_mask, "det_y")
-pos_L2_z = first_hit_quantity(arr, pos_L2_mask, "det_z")
-pos_L3_t = first_hit_quantity(arr, pos_L3_mask, "det_time_start")
-pos_L3_x = first_hit_quantity(arr, pos_L3_mask, "det_x")
-pos_L3_y = first_hit_quantity(arr, pos_L3_mask, "det_y")
-pos_L3_z = first_hit_quantity(arr, pos_L3_mask, "det_z")
-pos_L4_t = first_hit_quantity(arr, pos_L4_mask, "det_time_start")
-pos_L4_x = first_hit_quantity(arr, pos_L4_mask, "det_x")
-pos_L4_y = first_hit_quantity(arr, pos_L4_mask, "det_y")
-pos_L4_z = first_hit_quantity(arr, pos_L4_mask, "det_z")
-
-
-t_pos_up_rec = 0.5 * (pos_L1_t + pos_L2_t)
-xpos_up_ext, ypos_up_ext = extrapolate_to_z(pos_L2_x, pos_L2_y, pos_L2_z, pos_L1_x, pos_L1_y, pos_L1_z, Z_TARGET)
-
-t_pos_down_rec = 0.5 * (pos_L3_t + pos_L4_t)
-xpos_down_ext, ypos_down_ext = extrapolate_to_z(pos_L3_x, pos_L3_y, pos_L3_z, pos_L4_x, pos_L4_y, pos_L4_z, Z_TARGET)
-
-#=================================
-
-dmatch_up = dist_xy(xmu_ext, ymu_ext, xpos_up_ext, ypos_up_ext)
-dmatch_down = dist_xy(xmu_ext, ymu_ext, xpos_down_ext, ypos_down_ext)
-
-#=================================
-dt_up_rec = t_pos_up_rec - t_mu_rec
-dt_down_rec = t_pos_down_rec - t_mu_rec
-
-#=================================
-mask_rec_up = (has_mu_track & has_pos_up_track & mask_mu_stops_target
-    & mask_beam_region & (dmatch_up <= DMATCH) & (dt_up_rec > 0)
-    & (dt_up_rec < TGATE))
-
-mask_rec_down = (has_mu_track & has_pos_down_track & mask_mu_stops_target
-    & mask_beam_region & (dmatch_down <= DMATCH) & (dt_down_rec > 0)
-    & (dt_down_rec < TGATE))
-
-dt_up_selected = ak.to_numpy(dt_up_rec[mask_rec_up])
-dt_down_selected = ak.to_numpy(dt_down_rec[mask_rec_down])
+fname_sel='vx_muSR_spectrum_simulation.pdf'
+dt_up_sel, dt_down_sel, mask_rec_up, mask_rec_down = muSR_spectrum(arr, DMATCH, Detector_IDs, PIDs, TARGET_ID, TGATE, Z_TARGET)
+fit_plot_spectrum(dt_up_sel, dt_down_sel, Tthresh, TGATE, fname_sel, Fit_B_sigma, savefig)
 
 #=================================
 #=================================
 
-Ntot = len(arr["eventID"])
-print("Total events:", Ntot)
-print("Muon L1-L2 tracks:", ak.sum(has_mu_track))
-print("Muon stops target:", ak.sum(mask_mu_stops_target))
-print("Upstream positron tracks:", ak.sum(has_pos_up_track))
-print("Downstream positron tracks:", ak.sum(has_pos_down_track))
-print("Accepted upstream vx events:", ak.sum(mask_rec_up))
-print("Accepted downstream vx events:", ak.sum(mask_rec_down))
+    
+fname='Asymmetry_param_ideal.pdf'
+Plot_Asymmetry(dt_up_ideal, dt_down_ideal, TGATE, fname, NBINS, savefig)
 
+fname='Asymmetry_param.pdf'
+Plot_Asymmetry(dt_up_sel, dt_down_sel, TGATE,fname, NBINS, savefig) 
 
+#=================================
+#=================================
 
+Muon_Decay_Stop_Target(arr, savefig)
 
-bins = np.linspace(0, TGATE, 201)
-centers = 0.5 * (bins[:-1] + bins[1:])
+#=================================
+#=================================
+if statistics:
+    Ntot = len(arr["eventID"])
+    mask_mu_stops_target = arr["muDecayDetID"] == TARGET_ID
+    muL1_hit, muL2_hit, has_mu_hit_L1, has_mu_hit_L2, has_mu_track = Mask_Particle_Track_2Layers_Hits(arr,DET_L1,DET_L2,PID_MUP)
+    posL1_up_hit,  posL2_up_hit,   has_pos_hit_L1, has_pos_hit_L2, has_pos_up_track   = Mask_Particle_Track_2Layers_Hits(arr,DET_L1,DET_L2,PID_POS)
+    posL3_down_hit,posL4_down_hit, has_pos_hit_L3, has_pos_hit_L4, has_pos_down_track = Mask_Particle_Track_2Layers_Hits(arr,DET_L3,DET_L4,PID_POS)
 
-counts_up, _ = np.histogram(dt_up_selected, bins=bins)
-counts_down, _ = np.histogram(dt_down_selected, bins=bins)
+    Nmu_L1L2_track  = ak.sum(has_mu_track)
+    Nmu_stop_target = ak.sum(mask_mu_stops_target)
+    Npos_Up_L1L2    = ak.sum(has_pos_up_track)
+    Npos_Down_L3L4  = ak.sum(has_pos_down_track)
+    N_vx_up         = ak.sum(mask_rec_up)
+    N_vx_down       = ak.sum(mask_rec_down)
 
-yerrors_up   = np.sqrt(np.maximum(counts_up, 1))
-yerrors_down = np.sqrt(np.maximum(counts_down, 1))
-
-#----------------------------------------------------------
-# Bounds =([  1,-1,   0, 0.1,-np.pi, 0], # lower bounds
-#          [500, 1, 100,  10, np.pi, 1]  # upper bounds
-#         )
-
-# ic = centers > 0.1
-# # N0, A, B, omega, phi, sigma
-# popt_up, pcov_up      = curve_fit(musrSpec, centers[ic],   counts_up[ic], p0=[153.,-0.29, 0.46,5.34,-1.6,0.], bounds=Bounds)
-# popt_down, pcov_down  = curve_fit(musrSpec, centers[ic], counts_down[ic], p0=[153.,-0.35, 0.36,5.34, 1.6,0.], bounds=Bounds)
-
-# N0_up,     A_up,   B_up,   omega_up,   phi_up,   sigma_up = popt_up
-# N0_down, A_down, B_down, omega_down, phi_down, sigma_down = popt_down
-
-# txt = f'''
-# param | Upstream | Downstream |
-# ===============================
-# N0    | {N0_up:.3f}  | {N0_down:.3f}    |
-# A     | {A_up:.3f}   | {A_down:.3f}     |
-# B     | {B_up:.3f}    | {B_down:.3f}     |
-# omega | {omega_up:.3f}    | {omega_down:.3f}      |
-# phi   | {phi_up:.3f}   | {phi_down:.3f}      |
-# sigma | {sigma_up:.3f}    | {sigma_down:.3f}      |
-# '''
-
-#----------------------------------------------------------
-
-# Bounds =([  1,-1,  0, 0.1,-np.pi], # lower bounds
-#          [500, 1, 100,  10, np.pi]  # upper bounds
-#         )
-# ic = centers > 0.1
-# # N0, A, B, omega, phi
-# popt_up, pcov_up      = curve_fit(musrSpec1, centers[ic],   counts_up[ic], p0=[153.,-0.29, 0.46,5.34,-1.6], bounds=Bounds)
-# popt_down, pcov_down  = curve_fit(musrSpec1, centers[ic], counts_down[ic], p0=[153.,-0.35, 0.36,5.34, 1.6], bounds=Bounds)
-
-# N0_up,     A_up,   B_up,   omega_up,   phi_up = popt_up
-# N0_down, A_down, B_down, omega_down, phi_down = popt_down
-
-# txt = f'''
-# param | Upstream | Downstream |
-# ===============================
-# N0    | {N0_up:.3f}  | {N0_down:.3f}    |
-# A     | {A_up:.3f}   | {A_down:.3f}     |
-# B     | {B_up:.3f}    | {B_down:.3f}     |
-# omega | {omega_up:.3f}    | {omega_down:.3f}      |
-# phi   | {phi_up:.3f}   | {phi_down:.3f}      |
-# '''
-
-
-#----------------------------------------------------------
-
-Bounds =([  1,-1, 0.1,-np.pi], # lower bounds
-         [500, 1,  10, np.pi]  # upper bounds
-        )
-ic = centers > 0.1
-# N0, A, omega, phi
-popt_up, pcov_up      = curve_fit(musrSpec2, centers[ic],   counts_up[ic], p0=[153.,-0.29, 5.34,-1.6], bounds=Bounds)
-popt_down, pcov_down  = curve_fit(musrSpec2, centers[ic], counts_down[ic], p0=[153.,-0.35, 5.34, 1.6], bounds=Bounds)
-
-N0_up,     A_up, omega_up,   phi_up = popt_up
-N0_down, A_down, omega_down, phi_down = popt_down
-
-txt = f'''
-param | Upstream | Downstream |
-===============================
-N0    | {N0_up:.3f}  | {N0_down:.3f}    |
-A     | {A_up:.3f}   | {A_down:.3f}     |
-omega | {omega_up:.3f}    | {omega_down:.3f}      |
-phi   | {phi_up:.3f}   | {phi_down:.3f}      |
-'''
-
-#----------------------------------------------------------
-
-
-
-print(txt)
-
-
-tt = np.linspace(0,10,300)
-
-fig, ax = plotting_header(size="single")
-ax.errorbar(centers,counts_up/N0_up,yerr=yerrors_up/N0_up, lw=0.8, c='k', fmt="o", ms=1.5, label='Upstream')
-# ax.plot(tt, musrSpec(tt, N0_up, A_up, B_up, omega_up, phi_up, sigma_up)/N0_up,'-c',lw=1, label='Upstream fit')
-# ax.plot(tt, musrSpec1(tt, N0_up, A_up, B_up, omega_up, phi_up)/N0_up,'-c',lw=1, label='Upstream fit')
-ax.plot(tt, musrSpec2(tt, N0_up, A_up, omega_up, phi_up)/N0_up,'-c',lw=1, label='Upstream fit')
-ax.errorbar(centers,counts_down/N0_down,yerr=yerrors_down/N0_down, lw=0.8, c='r', fmt="^", ms=1.5, label='Downstream')
-# ax.plot(tt, musrSpec(tt, N0_down, A_down, B_down, omega_down, phi_down, sigma_down)/N0_down,'-b',lw=1, label='Downstream fit')
-# ax.plot(tt, musrSpec1(tt, N0_down, A_down, B_down, omega_down, phi_down)/N0_down,'-b',lw=1, label='Downstream fit')
-ax.plot(tt, musrSpec2(tt, N0_down, A_down, omega_down, phi_down)/N0_down,'-b',lw=1, label='Downstream fit')
-ax.set_xlabel(r"$t \; {\rm [\mu\,s]}$")
-ax.set_ylabel(r"$N(t)/N_0$")
-ax.set_xlim(0,8)
-ax.set_ylim(bottom=0)
-ax.legend(loc=0)
-if savefig:
-    fig.savefig('../plots/vx_muSR_spectrum_simulation.pdf')
-
-
-# ri_up = (counts_up[ic]-musrSpec2(centers[ic], N0_up, A_up, omega_up, phi_up))/yerrors_up[ic]
-# ri_down = (counts_down[ic]-musrSpec2(centers[ic], N0_down, A_down, omega_down, phi_down))/yerrors_down[ic]
-
-# xbins = np.linspace(-4,4,61)
-# hri_up,  xb_up   = np.histogram(ri_up,   bins=xbins)
-# hri_down,xb_down = np.histogram(ri_down, bins=xbins)
-
-# xb   = 0.5*(xbins[:-1]   + xbins[1:])
-# plt.plot(xb, hri_up, '-k', ds='steps-mid')
-# plt.plot(xb, hri_down, '-r', ds='steps-mid')
-
-
-
+    print("===================================================")
+    print(f"Total events: {Ntot}")
+    print(f"Muon L1-L2 tracks: {Nmu_L1L2_track}")
+    print(f"Muon stops target: {Nmu_stop_target}")
+    print(f"Upstream positron tracks: {Npos_Up_L1L2}:")
+    print(f"Downstream positron tracks: {Npos_Down_L3L4}")
+    print(f"Accepted upstream vx events: {N_vx_up}")
+    print(f"Accepted downstream vx events: {N_vx_down}")
+    print("===================================================")
+    print(f'Upstream muon track reconstruction: {100*Nmu_L1L2_track/Ntot:.2f}%')
+    print(f'Muon stop in target: {100*Nmu_stop_target/Ntot:.2f}%')
+    print(f'Muon stop from reconstructed tracks: {100*Nmu_stop_target/Nmu_L1L2_track:.2f}%')
+    print(f'Upstream positron track from strop muons: {100*Npos_Up_L1L2/Nmu_stop_target:.2f}%')
+    print(f'Downstream positron track from strop muons: {100*Npos_Down_L3L4/Nmu_stop_target:.2f}%')
+    print(f'Accepted upstream vx-events (N_vx/N_up): {100*N_vx_up/Npos_Up_L1L2:.2f}%')
+    print(f'Accepted downstream vx-events: {100*N_vx_down/Npos_Down_L3L4:.2f}%')
+    print("===================================================")
 
 
