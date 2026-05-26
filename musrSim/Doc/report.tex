@@ -6,13 +6,15 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta}
 \usepackage{booktabs}
+\usepackage{subcaption}
 \usepackage{graphicx}
-\usepackage[hidelinks]{hyperref}
+%\usepackage[hidelinks]{hyperref}
+\usepackage{hyperref}
 
 \sisetup{separate-uncertainty=true, per-mode=symbol}
 
 \title{Simulation of Si-Pixel vx-$\mu$SR using musrSim}
-\author{Ervin Kafexhiu}
+\author{EK}
 \date{\today}
 
 \begin{document}
@@ -20,13 +22,13 @@
 
 
 \begin{abstract}
-The purpose of this report is to demonstrate the command of \texttt{musrSim}/Geant4 simulations. For this reason, I created a relatively detailed model/geometry of a Si-pixel vx-$\mu$SR detector, inspired by Mandok et al. (2026) and try to reproduce/obtain some of their key results using \texttt{musrSim} simulations. The aim is not to reproduce the full mechanical detector, but to test the essential reconstruction chain: muon transport through thin silicon layers, track extrapolation to the sample, comparison with the true muon stopping point, and, in a second step, reconstruction of a transverse-field $\mu$SR time spectrum from muon decay positron tracks.
+This report documents a simplified \texttt{musrSim}/Geant4 study of a Si-pixel vertex-reconstructed $\mu$SR geometry inspired by Mandok et al. (2026). The purpose is not to reproduce the full mechanical detector module, but to test the essential ingredients of the reconstruction chain: transport of surface muons through thin silicon tracking layers, reconstruction of the incoming muon trajectory from upstream hits, extrapolation to the target plane, comparison with the true muon stopping position, and, in a second simulation, the reconstruction of a transverse-field vx-$\mu$SR time spectrum from decay positron tracks. Two configurations are considered: a zero-field track-reconstruction study with an aluminium target and variable inner-layer spacing, and a transverse-field vx-$\mu$SR study using a smaller aluminium target in a uniform magnetic field of $6.3~\si{mT}$.
 \end{abstract}
 
 
-\section{Detector Setup}
+\section{Simulation Geometry and Configuration}
 
-Similar with the spectrometer described in Mandok et al. (2026), the one I use here has 4 layers of Si-pixel detectors. 
+The simulated geometry is a simplified version of the Si-pixel vx-$\mu$SR spectrometer described by Mandok et al. (2026). The beam axis defines the $z$-direction, the vertical detector coordinate is $y$, and the target is centered at $z=0$. The incoming particles are positive surface muons traveling along $+z$-direction, with initial spin polarization along $+x$-direction. 
 
 \begin{figure}[ht]
 \centering
@@ -68,87 +70,384 @@ Similar with the spectrometer described in Mandok et al. (2026), the one I use h
   \node[black,right] at (31,10) {Si-pixels};
   % Target at z = 0
   \draw[fill=red!50,draw=black] (-\targetHalfZ,-\targetHalfY) rectangle (\targetHalfZ,\targetHalfY);
-  \node[right,rotate=90] at (3,0) {Target};
+  \node[left,rotate=90] at (3,0) {Target};
   % Magnets (for vx-$\mu$SR case)
-  \draw[fill=gray!35,draw=black] (-\magHalfZ,\yMagTop-\magHalfY) rectangle (\magHalfZ,\yMagTop+\magHalfY);
-  \draw[fill=gray!35,draw=black] (-\magHalfZ,\yMagBot-\magHalfY) rectangle (\magHalfZ,\yMagBot+\magHalfY);
+  \draw[fill=gray!10,draw=black] (-\magHalfZ,\yMagTop-\magHalfY) rectangle (\magHalfZ,\yMagTop+\magHalfY);
+  \draw[fill=gray!10,draw=black] (-\magHalfZ,\yMagBot-\magHalfY) rectangle (\magHalfZ,\yMagBot+\magHalfY);
   \node at (0,\yMagTop) {Magnet};
   \node at (0,\yMagBot) {Magnet};
   % Magnetic field arrow in target region
-  \draw[->,very thick,black] (-4,0) -- +(0,6);
-  \node[left,black] at (-4,2) {$\vec{\mathbf{B}}$};
+  \draw[->,very thick,black] (-2,1) -- +(0,8);
+  \node[left,black] at (-2,6) {$\vec{\mathbf{B}}$};
    % Layer distances
    \draw[<->,black] (\zLone,-\chipHalfY-1) -- (\zLtwo,-\chipHalfY-1) node[below, midway] {20mm};
    \draw[<->,black] (\zLtwo,-\chipHalfY-1) -- (\zLthree,-\chipHalfY-1) node[below, midway] {d};
 	\draw[<->,black] (\zLthree,-\chipHalfY-1) -- (\zLfour,-\chipHalfY-1) node[below, midway] {20mm};
-  %--------------------------------------------------
   % Optional guides
-  %--------------------------------------------------
 %  \draw[dashed,thin,gray] (-42,\targetHalfY) -- (42,\targetHalfY);
 %  \draw[dashed,thin,gray] (-42,-\targetHalfY) -- (42,-\targetHalfY);
 \end{tikzpicture}
-\caption{Simplified $yz$-cross section of the musrSim detector geometry. The $z$-axis is the beam direction, the $y$-axis is vertical, and the aluminium target is centered at $z=0$. \label{fig:schematics}}
+\caption{Schematic $yz$-cross section of the simplified Si-pixel vx-$\mu$SR geometry. The $z$-axis is the beam direction and the aluminium target is centered at $z=0$. Layers L1--L2 reconstruct the incoming muon track, while L3--L4 are used for downstream positron tracking. In the transverse-field configuration, a uniform field is applied along $+y$. The drawing is not to scale. \label{fig:detector_geometry}}
 \end{figure}
 
 
-\vspace{1em}
-\textbf{Sensitive area:} 
-\begin{itemize}
-\item Four layers $L1$ - $L4$, each with a sensitive area of $40\,{\rm mm}\times40\,{\rm mm}$.
-\item Layer thickness $=100\,{\rm \mu m}$.
-\item Material: G4\_Si
-\item Polyimide foil: $=25\,{\rm \mu m}$.
-\item Fig.1 of Mandok et al. seems to suggest that Polyimide foil face away from the target (see the schematics Fig.\ref{fig:schematics} here)
-\item Foil Material: G4\_KAPTON
-\end{itemize}
+The detector is approximated by four continuous silicon tracking planes rather
+than by the full Quad-module structure. Each silicon layer is followed by a thin
+polyimide/Kapton support foil. The detector-layer positions used for the
+reference geometry are summarized in Table~\ref{tab:layers}.
 
-\vspace{1em}
-\textbf{Sample/Target:} 
-\begin{itemize}
-\item Centered in $z=0$.
-\item Simulation 1: G4\_Al disk with diameter 20mm and thickness 1mm.
-\item Simulation 2: G4\_Al disk with diameter 6mm and thickness 1mm, and uniform magnetic field in the $+y$-direction with $B=6.3\,{\rm mT}$.
-\end{itemize}
+\begin{table}[ht]
+\centering
+\caption{Tracking-layer geometry used in the simplified musrSim model.}
+\label{tab:layers}
+\begin{tabular}{cccc}
+\toprule
+Layer & Position $z$ [mm] & Role & Detector ID \\
+\midrule
+L1 & $-30$ & upstream outer layer & 101 \\
+L2 & $-10$ & upstream inner layer & 102 \\
+L3 & $+10$ & downstream inner layer & 103 \\
+L4 & $+30$ & downstream outer layer & 104 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-\vspace{1em}
-\textbf{Beam:} 
-\begin{itemize}
-\item Particle: $\mu^+$.
-\item Energy: Surface muons with kinetic energy 4.1 MeV (momentum direction $+z$-direction).
-\item Polarization: $+x$-direction (polarization ratio 100\%).
-\item Geometry: Pointlike beam incident perpendicular with $L1$ layer.
-\item Collimator: no collimator considered or any other muon beam except for monoenergetic and point-like.
-\end{itemize}
+\begin{table}[ht]
+\centering
+\caption{Main detector, target, beam, and field parameters used in the simulations.}
+\label{tab:sim_parameters}
+\begin{tabular}{lll}
+\toprule
+Component & Parameter & Value / implementation \\
+\midrule
+Si tracking layers & active area & $40~\si{mm}\times40~\si{mm}$ \\
+  & thickness
+  & $100~\si{\micro m}$ \\
+  & material
+  & \texttt{G4\_Si} \\
 
-\vspace{1em}
-\textbf{Permanent Magnets:} 
-\begin{itemize}
-\item Considered two permanent magnets that produce "uniform" magnetic field in the target.
-\item Magnetic field vector is in the $+y$-direction (magnitude depends on the simulation type).
-\item Dimensions: $10\,{\rm mm} \times 2\,{\rm mm} \times 10\,{\rm mm}$.
-\item Positioned: Symmetrical with respect to the target in the $y$-direction.
-\item Material: G4\_Fe
-\end{itemize}
+Support foils
+  & thickness
+  & $25~\si{\micro m}$ \\
+  & material
+  & \texttt{G4\_KAPTON} \\
+
+Target, Simulation 1
+  & material and size
+  & \texttt{G4\_Al}, $D=\SI{10}{mm}$, $H=\SI{1}{mm}$ \\
+
+Target, Simulation 2
+  & material and size
+  & \texttt{G4\_Al}, $D=\SI{6}{mm}$, $H=\SI{1}{mm}$ \\
+
+Primary beam
+  & particle
+  & $\mu^+$ \\
+  & kinetic energy
+  & $\SI{4.1}{MeV}$ \\
+  & direction
+  & $+z$ \\
+  & initial polarization
+  & $+x$, polarization fraction $=100\%$ \\
+
+Beam model
+  & transverse profile
+  & point-like, monoenergetic beam; no collimator \\
+
+Magnetic field
+  & Simulation 1
+  & $B=0$ \\
+  & Simulation 2
+  & uniform field, $\vec{B}=(0,6.3,0)~\si{mT}$ \\
+
+Magnet placeholders
+  & material and size
+  & \texttt{G4\_Fe}, $10~\si{mm}\times2~\si{mm}\times10~\si{mm}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 
-\vspace{1em}
-\textbf{Physics Configuration:} 
-\begin{itemize}
-\item $\mu^+$, $e^+$, $e^-$: G4MuMultipleScattering, G4MuIonisation, G4MuBremsstrahlung
-\item $\mu^+$: G4MuPairProduction
-\item $e^+$: G4eplusAnnihilation
-\item $\gamma$: G4PhotoElectricEffect, G4ComptonScattering, G4GammaConversion, G4RayleighScattering.
-\end{itemize}
+The two iron magnet volumes are included only as simple geometrical placeholders. In the transverse-field simulation the relevant field is not produced by a realistic magnet model, but is imposed as a uniform field in the target region. The field points along $+y$, perpendicular to both the beam direction and the initial muon spin.
 
-SetUserLimits for all detector layers 0.01mm.
+The electromagnetic physics configuration includes multiple scattering, ionisation, bremsstrahlung, and pair-production processes for positive muons, the corresponding electromagnetic processes for electrons and positrons, positron annihilation, and the standard photon interactions. A user step limit of $0.01~\si{mm}$ is applied in the thin silicon layers and in the target in order to improve tracking through small volumes.
 
 
+\subsubsection*{Software Environment}
 
-\section{Simulation 1: Reconstruction Residual versus Inner-Layer Distance}
+For reproducibility, all simulation macros and analysis scripts are archived in
+the \href{https://github.com/ekafex/muSR_spectrometer/tree/main/musrSim}{project github repository}. The simulations were performed with \texttt{musrSim}
+1.0.5 using Geant4 10.3, and the ROOT output was analysed with ROOT 6.36.06,
+\texttt{uproot} 5.7.4, and Python 3.12.13.
 
-The first study examines how the track-reconstruction residual depends on the separation $d$ between the two inner tracking layers $L2$ and $L3$. Here are simulated $10^5$ events for the following distances $d=5, 10, 15, 20, 25, 30, 35, 40~\si{mm}$. The magnetic field is set to  $B=0$. The intended target for this study is an aluminum disk of diameter of $20~\si{mm}$ and thickness of $1~\si{mm}$ centered at $z=0$.
 
-\subsection{Sanity checks}
+
+
+
+\section{Simulation 1: Track-Reconstruction Residual versus Inner-Layer Distance}
+\label{sec:sim1}
+
+The first simulation campaign quantifies how the track-reconstruction residual depends on the distance $d$ between the two inner tracking layers L2 and L3. For each detector configuration, $10^5$ primary $\mu^+$ events were simulated. The magnetic field was set to zero, and the target was an aluminium disk centered at $z=0$ with diameter $D=\SI{20}{mm}$ and thickness $H=\SI{1}{mm}$.
+
+\begin{table}[ht]
+\centering
+\caption{Simulation conditions for the reconstruction-residual study.}
+\label{tab:sim1_conditions}
+\begin{tabular}{ll}
+\toprule
+Quantity & Value / selection \\
+\midrule
+Primary particle & $\mu^+$ \\
+Muon kinetic energy & $\SI{4.1}{MeV}$ \\
+Beam direction & $+z$ \\
+Initial polarization & $+x$ \\
+Magnetic field & $B=0$ \\
+Target & $\texttt{G4\_Al}$, $D=\SI{20}{mm}$, $H=\SI{1}{mm}$ \\
+Inner-layer distance & $d=\SI{5}{mm}, \SI{10}{mm}, \ldots, \SI{40}{mm}$ \\
+Events per configuration & $10^5$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+For each accepted event, the incoming muon trajectory is reconstructed from the hit positions in the two upstream layers L1 and L2. A straight-line tracklet is formed and extrapolated to the target plane. The extrapolated transverse position is then compared with the true simulated muon stopping position in the target. The simulation-level geometrical acceptance as a function of the distance $d$ for both muon and positrons are shown in Fig.~\ref{fig:geometrical_accept}.
+
+
+\begin{figure}
+\centering
+\includegraphics[scale=1.1]{../plots/SIMULATION_1/Acceptance_vs_d.pdf}
+\caption{Simulation-level geometrical acceptance as a function of the inner-layer distance $d$. The $\mu^+$ track acceptance is defined by the presence of valid hits in both upstream layers L1 and L2. The positron single-layer acceptances are defined by the presence of a hit in L3 or L4, normalized to the number of muons decaying in the target. The $e^+$ track acceptance requires valid hits in both L3 and L4 normalized to the number of muons decaying in the target. No detector-response inefficiency is included; therefore the curves represent geometrical and analysis-selection acceptance, not experimental detector efficiency. \label{fig:geometrical_accept}}
+\end{figure}
+
+
+The muon reconstruction residual is defined as
+
+$$
+\delta_\mu = \sqrt{\left(x_{\mathrm{stop}}-x_{\mathrm{ext}}\right)^2+ \left(y_{\mathrm{stop}}-y_{\mathrm{ext}}\right)^2},
+$$
+
+where $(x_{\mathrm{stop}},y_{\mathrm{stop}})$ is the true muon stopping position and $(x_{\mathrm{ext}},y_{\mathrm{ext}})$ is the extrapolated position obtained from the L1--L2 tracklet. Only events with a valid target stop and a clean upstream muon track candidate are used for the $\delta_\mu$ distribution.
+
+An analogous residual is computed for decay positrons. In this case, positron tracklets are reconstructed from the downstream layers L3 and L4 and extrapolated backwards to the true muon decay position in the target. The positron residual is
+
+$$
+\delta_{e^+} = \sqrt{\left(x_{\mathrm{dec}}-x_{\mathrm{ext}}\right)^2+
+\left(y_{\mathrm{dec}}-y_{\mathrm{ext}}\right)^2 }.
+$$
+
+For each value of $d$, the distributions of $\delta_\mu$ and $\delta_{e^+}$ are summarized by their mean values,
+
+$$ \langle \delta_\mu \rangle, \qquad \langle \delta_{e^+} \rangle, $$
+
+and standard deviations,
+
+$$ \sigma(\delta_\mu), \qquad \sigma(\delta_{e^+}). $$
+
+The standard deviation $\sigma(\delta_\mu)$ is used as the main estimate of the lateral uncertainty of the reconstructed muon stopping position. The distribution of $\delta_\mu$ and $\delta_e$ for a fixed $d$ is shown in Fig.~\ref{fig:delta_distribution} in the Appendix. The dependence of the residual mean and width on the inner-layer separation $d$ is shown in Fig.~\ref{fig:delta_mean_std}.
+
+
+\begin{figure}[ht]
+\centering
+\begin{subfigure}{0.49\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../plots/SIMULATION_1/Mean_deltas.pdf}
+\caption{Mean residual.}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.49\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../plots/SIMULATION_1/Std_deltas.pdf}
+\caption{Residual width.}
+\end{subfigure}
+
+\caption{Mean and standard deviation of the reconstruction residuals as functions of the inner-layer distance $d$. The width $\sigma(\delta_\mu)$ is used as the main estimate of the muon vertex-reconstruction uncertainty. \label{fig:delta_mean_std} }
+\end{figure}
+
+
+%\clearpage
+
+\section{Simulation 2: Transverse-Field vx-\texorpdfstring{$\mu$}{mu}SR Spectrum}
+\label{sec:sim2}
+
+The second simulation tests whether the simplified geometry can reproduce the basic ingredients of a transverse-field vx-$\mu$SR measurement. The detector geometry is kept fixed at the reference configuration with an inner-layer separation $d=\SI{20}{mm}$. The target is changed to a smaller aluminium disk centered at $z=0$, with diameter $D=\SI{6}{mm}$ and thickness $H=\SI{1}{mm}$. A uniform magnetic field is applied in the target region,
+
+$$ \vec{B} = (0,\SI{6.3e-3}{T},0), $$
+
+corresponding to a transverse field of $B=\SI{6.3}{mT}$ along $+y$. Since the beam travels along $+z$ and the initial muon-spin polarization is along $+x$, the spin precesses around the magnetic-field direction.
+
+\begin{table}[ht]
+\centering
+\caption{Simulation conditions for the transverse-field vx-$\mu$SR study.}
+\label{tab:sim2_conditions}
+\begin{tabular}{ll}
+\toprule
+Quantity & Value / implementation \\
+\midrule
+Primary particle & $\mu^+$ \\
+Muon kinetic energy & $\SI{4.1}{MeV}$ \\
+Target & $\texttt{G4\_Al}$, $D=\SI{6}{mm}$, $H=\SI{1}{mm}$ \\
+Inner-layer distance & $d=\SI{20}{mm}$ \\
+Magnetic field & $\vec{B}=(0,\SI{6.3e-3}{T},0)$ \\
+Field direction & $+y$ \\
+Initial spin direction & $+x$ \\
+Time window & $0 < \Delta t < \SI{13}{\micro s}$ \\
+Events simulated & $10^5$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two spectra are constructed. The first is a truth-level spectrum, where the muon decay time and positron direction are taken directly from simulated quantities. The second is a reconstructed vx-$\mu$SR spectrum. In the reconstructed case, the incoming muon track is reconstructed from L1--L2 hits, while decay-positron tracklets are reconstructed using either the upstream or downstream detector pairs. Events are accepted if the muon decays in the target, the required muon and positron tracklets are present, the reconstructed positron--muon matching distance satisfies
+
+$$ d_{\mathrm{match}} \leq \SI{1}{mm}, $$
+
+and the reconstructed time difference lies inside the analysis window,
+
+$$ 0 < \Delta t < \SI{13}{\micro s}. $$
+
+The reconstructed time differences are defined as
+
+$$
+\Delta t_{\mathrm{up}} = t^{\mathrm{rec}}_{e^+,\mathrm{up}} - t^{\mathrm{rec}}_{\mu}, \qquad \Delta t_{\mathrm{down}} = t^{\mathrm{rec}}_{e^+,\mathrm{down}} - t^{\mathrm{rec}}_{\mu}.
+$$
+
+The upstream and downstream spectra are then fitted with a muon-decay envelope modulated by transverse-field spin precession,
+
+$$ N(t) = N_0 e^{-t/\tau_\mu} \left[1 + A\cos(\omega t + \phi)\right], \qquad \tau_\mu = \SI{2.197}{\micro s}.
+$$
+
+The asymmetry is computed from the two spectra as
+
+$$ A(t) = \frac{N_{\mathrm{up}}(t)-\alpha N_{\mathrm{down}}(t)}{N_{\mathrm{up}}(t)+\alpha N_{\mathrm{down}}(t)}, \qquad \alpha = \frac{\sum_t N_{\mathrm{up}}(t)}{\sum_t N_{\mathrm{down}}(t)}.
+$$
+
+The resulting spectra and asymmetry are shown in Fig.~\ref{fig:vxmusr_spectrum}. The purpose of this simulation is not yet a precision extraction of the relaxation parameters, but a consistency check that the simulated detector geometry, event matching, and time reconstruction produce the expected transverse-field oscillatory structure.
+
+\begin{figure}[ht]
+\centering
+
+\begin{subfigure}{0.49\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../plots/SIMULATION_2/vx_muSR_spectrum_simulation.pdf}
+\caption{Reconstructed upstream and downstream spectra.}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.49\textwidth}
+\centering
+\includegraphics[width=\textwidth]{../plots/SIMULATION_2/Asymmetry_param.pdf}
+\caption{Corresponding upstream--downstream asymmetry.}
+\end{subfigure}
+
+\caption{
+Reconstructed transverse-field vx-$\mu$SR signal for a $\SI{6}{mm}$-diameter aluminium target in a uniform $\SI{6.3}{mT}$ field. The spectra are built from matched muon and positron tracklets inside the time window $0<\Delta t<\SI{13}{\micro s}$. The asymmetry shows the expected oscillatory behaviour, although the present statistics are limited. \label{fig:vxmusr_spectrum}}
+\end{figure}
+
+
+
+%\section{Simulation 2: Transverse-Field vx-\texorpdfstring{$\mu$}{mu}SR Spectrum}
+%
+%The second study switches to the transverse-field vx-$\mu$SR configuration. The
+%sample is an aluminium disk centered at $z=0$ with
+%$$ D=\SI{6}{mm}, \qquad t=\SI{1}{mm}. $$
+%
+%This is implemented in \texttt{simulation2.mac} by the target command with outer
+%radius $3~\si{mm}$ and half-thickness $0.5~\si{mm}$.
+%
+%A uniform magnetic field is applied in the target region using
+%$$ \vec{B} = (0,\,0.0063,\,0)~\si{T}, $$
+%
+%that is, a transverse field of $6.3~\si{mT}$ along $+y$. With the beam along
+%$+z$ and the initial muon spin along $+x$, this produces spin precession around
+%the $y$ axis. The analysed ROOT file is $\texttt{musr\_TargetD6mm\_d20mm\_B6\_3mT\_N1e5.root}$.
+%
+%Two spectra are constructed. The first is an ``ideal'' truth-level spectrum,
+%where the muon decay time is taken from the simulated target quantities and the
+%positron direction is classified using the initial positron momentum component
+%$p_z$. The second is a reconstructed vx-$\mu$SR spectrum. In the reconstructed
+%case, the muon track is built from L1--L2, upstream positrons from L1--L2, and
+%downstream positrons from L3--L4. The reconstructed time differences are
+%$$
+%  \Delta t_{\rm up}   = t_{e^+,\rm up}^{\rm rec} - t_{\mu}^{\rm rec},
+%  \qquad
+%  \Delta t_{\rm down} = t_{e^+,\rm down}^{\rm rec} - t_{\mu}^{\rm rec}.
+%$$
+%Events are accepted if the muon stops in the target, the relevant muon and
+%positron tracklets exist, the reconstructed positron--muon transverse matching
+%distance satisfies
+%\[
+%  d_{\rm match} \leq \SI{1}{mm},
+%\]
+%and the time difference lies inside the gate
+%\[
+%  0 < \Delta t < \SI{13}{\micro s}.
+%\]
+%
+%The upstream and downstream time spectra are fitted with a muon-decay envelope
+%modulated by a transverse-field oscillation,
+%\[
+%  N(t)=N_0 e^{-t/\tau_\mu}\left[1+A\cos(\omega t+\phi)\right],
+%  \qquad \tau_\mu = \SI{2.197}{\micro s},
+%\]
+%with optional background and Gaussian damping terms available in the analysis
+%script. The asymmetry is computed as
+%\[
+%  A(t)=
+%  \frac{N_{\rm up}(t)-\alpha N_{\rm down}(t)}
+%       {N_{\rm up}(t)+\alpha N_{\rm down}(t)},
+%  \qquad
+%  \alpha = \frac{\sum_t N_{\rm up}(t)}{\sum_t N_{\rm down}(t)}.
+%\]
+%The output plots compare the ideal truth-level spectrum with the reconstructed
+%vx-$\mu$SR spectrum and show the corresponding asymmetry curves.
+%
+%\begin{figure}
+%\centering
+%\includegraphics[scale=1.1]{../plots/SIMULATION_2/vx_muSR_spectrum_simulation.pdf}
+%\caption{vx-$\mu$SR spectrum}
+%\end{figure}
+%
+%
+%% Suggested figures to include after final selection:
+%% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_2/vx_muSR_spectrum_ideal.pdf}
+%% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_2/vx_muSR_spectrum_simulation.pdf}
+%% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_2/Asymmetry_param_ideal.pdf}
+%% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_2/Asymmetry_param.pdf}
+
+\section{Current Simplifications}
+
+The present model keeps only the ingredients needed for a first reconstruction
+and vx-$\mu$SR feasibility test. The real Quad-module geometry, individual chip
+gaps, pixelization, PCB material, detailed support structures, realistic beam
+spot, Pb collimation, detector timing response, time-over-threshold response,
+and realistic permanent-magnet field map are not included. The magnetic volumes
+in the macros are placeholders; the field used in the second study is a uniform
+field applied to the target region.
+
+\section{Analysis Outputs}
+
+The reconstruction-resolution study produces residual histograms for $\mu^+$ and
+$e^+$, the mean and standard deviation of the residuals as functions of $d$, and
+basic layer-efficiency checks. The vx-$\mu$SR study produces target stopping
+plots, ideal and reconstructed time spectra, fitted oscillatory spectra, and
+upstream--downstream asymmetry plots. These outputs provide a compact validation
+chain from geometrical tracking to a reconstructed transverse-field vx-$\mu$SR
+signal.
+
+
+\appendix
+\section{Appendix: Sanity Checks and Supplementary Plots}
+
+\subsection{Simulation 1}
+
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d10mm.pdf}
+\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d20mm.pdf}
+\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d30mm.pdf}
+\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d40mm.pdf}
+\caption{Distribution of $\delta_\mu$ (red) and $\delta_e$ (black) for different distances $d$. \label{fig:delta_distribution}}
+\end{figure}
+
+
 
 \begin{figure}
 \centering
@@ -174,163 +473,14 @@ The first study examines how the track-reconstruction residual depends on the se
 \end{figure}
 
 
-\begin{figure}
-\centering
-\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d10mm.pdf}
-\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d20mm.pdf}
-\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d30mm.pdf}
-\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d40mm.pdf}
-\caption{Distribution of $\delta_\mu$ (red) and $\delta_e$ (black) for different distances $d$. \label{fig:delta}}
-\end{figure}
 
-
-\begin{figure}
-\centering
-\includegraphics[scale=0.95]{../plots/SIMULATION_1/Mean_deltas.pdf}
-\includegraphics[scale=0.95]{../plots/SIMULATION_1/Std_deltas.pdf}
-\caption{$\delta_\mu$ and $\delta_e$ mean (left) and standard deviation (right) as a function of the distances $d$. The red circles show the results obtained here for muons, whereas, blue squares are the ones for positrons. Red line is the linear fit for muons and while blue one is for positron. The mean values of $\delta$ are linear functions of distance $d$ and the linear function fits very well. The standard deviation $\sigma(\delta_\mu)$ for muons is a linear function of $d$, however, for positrons is not a clean linear function. For comparison the Mandok et al. (2026) points for $\sigma(\delta_\mu)$  (black triangles) are also included, however, their dependence on $d$ is steeper. \label{fig:delta_mean_std}}
-\end{figure}
-
-
-
-
-
-For each event, the upstream muon track is reconstructed from the L1 and L2 hit
-positions. The straight-line tracklet is extrapolated to the true muon decay or
-stopping plane, and the transverse residual is computed as
-\[
-  \delta_\mu =
-  \sqrt{\left(x_{\rm stop}-x_{\rm ext}\right)^2+
-        \left(y_{\rm stop}-y_{\rm ext}\right)^2}.
-\]
-Only events with a target decay/stopping point and exactly one selected muon hit
-in each of L1 and L2 are used for the clean muon residual sample.
-
-The same procedure is applied to decay positrons using downstream layers L3 and
-L4, giving
-\[
-  \delta_{e^+} =
-  \sqrt{\left(x_{\rm dec}-x_{\rm ext}\right)^2+
-        \left(y_{\rm dec}-y_{\rm ext}\right)^2}.
-\]
-For positrons the fitted track is extrapolated backwards to the muon decay
-point. The analysis stores, for each distance $d$, the mean and standard
-deviation of both $\delta_\mu$ and $\delta_{e^+}$ in \texttt{data/deltas.dat}.
-The main performance quantity is
-\[
-  \sigma(\delta_\mu),
-\]
-which is compared with the corresponding trend extracted from Mandok et al.
-Figure~4.
-
-% Suggested figures to include after final selection:
-% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_1/Std_deltas.pdf}
-% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_1/Mean_deltas.pdf}
-% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_1/Muon_Decay_Target_Transverse_Spread.pdf}
-% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_1/Layer_efficiency.pdf}
-
-
-\clearpage
-
-\section{Simulation 2: Transverse-Field vx-$\mu$SR Spectrum}
-
-The second study switches to the transverse-field vx-$\mu$SR configuration. The
-sample is an aluminium disk centered at $z=0$ with
-\[
-  D=\SI{6}{mm}, \qquad t=\SI{1}{mm}.
-\]
-This is implemented in \texttt{simulation2.mac} by the target command with outer
-radius $3~\si{mm}$ and half-thickness $0.5~\si{mm}$.
-
-A uniform magnetic field is applied in the target region using
-\[
-  \vec{B} = (0,\,0.0063,\,0)~\si{T},
-\]
-that is, a transverse field of $6.3~\si{mT}$ along $+y$. With the beam along
-$+z$ and the initial muon spin along $+x$, this produces spin precession around
-the $y$ axis. The analysed ROOT file is
-\[
-  \texttt{musr\_TargetD6mm\_d20mm\_B6\_3mT\_N1e5.root}.
-\]
-
-Two spectra are constructed. The first is an ``ideal'' truth-level spectrum,
-where the muon decay time is taken from the simulated target quantities and the
-positron direction is classified using the initial positron momentum component
-$p_z$. The second is a reconstructed vx-$\mu$SR spectrum. In the reconstructed
-case, the muon track is built from L1--L2, upstream positrons from L1--L2, and
-downstream positrons from L3--L4. The reconstructed time differences are
-\[
-  \Delta t_{\rm up}   = t_{e^+,\rm up}^{\rm rec} - t_{\mu}^{\rm rec},
-  \qquad
-  \Delta t_{\rm down} = t_{e^+,\rm down}^{\rm rec} - t_{\mu}^{\rm rec}.
-\]
-Events are accepted if the muon stops in the target, the relevant muon and
-positron tracklets exist, the reconstructed positron--muon transverse matching
-distance satisfies
-\[
-  d_{\rm match} \leq \SI{1}{mm},
-\]
-and the time difference lies inside the gate
-\[
-  0 < \Delta t < \SI{13}{\micro s}.
-\]
-
-The upstream and downstream time spectra are fitted with a muon-decay envelope
-modulated by a transverse-field oscillation,
-\[
-  N(t)=N_0 e^{-t/\tau_\mu}\left[1+A\cos(\omega t+\phi)\right],
-  \qquad \tau_\mu = \SI{2.197}{\micro s},
-\]
-with optional background and Gaussian damping terms available in the analysis
-script. The asymmetry is computed as
-\[
-  A(t)=
-  \frac{N_{\rm up}(t)-\alpha N_{\rm down}(t)}
-       {N_{\rm up}(t)+\alpha N_{\rm down}(t)},
-  \qquad
-  \alpha = \frac{\sum_t N_{\rm up}(t)}{\sum_t N_{\rm down}(t)}.
-\]
-The output plots compare the ideal truth-level spectrum with the reconstructed
-vx-$\mu$SR spectrum and show the corresponding asymmetry curves.
-
-\begin{figure}
-\centering
-\includegraphics[scale=1.5]{../plots/SIMULATION_2/vx_muSR_spectrum_simulation.pdf}
-\caption{vx-$\mu$SR spectrum}
-\end{figure}
-
+\subsection{Simulation 2}
 
 \begin{figure}
 \centering
 \includegraphics[scale=1]{../plots/SIMULATION_2/Asymmetry_param.pdf}
 \caption{Asymmetry parameter for the vx-$\mu$SR spectrum.}
 \end{figure}
-
-% Suggested figures to include after final selection:
-% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_2/vx_muSR_spectrum_ideal.pdf}
-% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_2/vx_muSR_spectrum_simulation.pdf}
-% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_2/Asymmetry_param_ideal.pdf}
-% \includegraphics[width=0.48\textwidth]{plots/SIMULATION_2/Asymmetry_param.pdf}
-
-\section{Current Simplifications}
-
-The present model keeps only the ingredients needed for a first reconstruction
-and vx-$\mu$SR feasibility test. The real Quad-module geometry, individual chip
-gaps, pixelization, PCB material, detailed support structures, realistic beam
-spot, Pb collimation, detector timing response, time-over-threshold response,
-and realistic permanent-magnet field map are not included. The magnetic volumes
-in the macros are placeholders; the field used in the second study is a uniform
-field applied to the target region.
-
-\section{Analysis Outputs}
-
-The reconstruction-resolution study produces residual histograms for $\mu^+$ and
-$e^+$, the mean and standard deviation of the residuals as functions of $d$, and
-basic layer-efficiency checks. The vx-$\mu$SR study produces target stopping
-plots, ideal and reconstructed time spectra, fitted oscillatory spectra, and
-upstream--downstream asymmetry plots. These outputs provide a compact validation
-chain from geometrical tracking to a reconstructed transverse-field vx-$\mu$SR
-signal.
 
 \end{document}
 

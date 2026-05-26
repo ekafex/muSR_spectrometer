@@ -242,7 +242,7 @@ def Calc_deltas(dd):
 # ---------------------------------------
 def Save_Plot_Deltas(d:list, DELTA_MAX:float=5.0, N_BINS:int=150, SAVE_FIGURE:bool=False):
     set_publication_style()
-    with open('data/deltas.dat','w') as f:
+    with open('../data/deltas.dat','w') as f:
         f.write('#d,delta_mu_mean, delta_mu_std, delta_ep_mean, delta_ep_std, NmuL1, Nmu_L2, Nep_L3, Nep_L4, Nmu_clean, Nep_clean, Ntot\n')
         for dd in d:
             arr, nn, deltas, decay_in_target, masks = Calc_deltas(dd)

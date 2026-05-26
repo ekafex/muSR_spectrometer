@@ -256,8 +256,8 @@ def musrSpec2(t, N0, A, omega, phi):
 
 
 
-def fit_plot_spectrum(dt_up, dt_down, time_thresh, gate_time, fname, Fit_B_sigma, savefig=False):
-    bins = np.linspace(0, gate_time, 201)
+def fit_plot_spectrum(dt_up, dt_down, time_thresh, gate_time, fname, Fit_B_sigma, NBINS=200, savefig=False):
+    bins = np.linspace(0, gate_time, NBINS+1)
     centers = 0.5 * (bins[:-1] + bins[1:])
     counts_up,   _ = np.histogram(dt_up,   bins=bins)
     counts_down, _ = np.histogram(dt_down, bins=bins)
@@ -462,16 +462,16 @@ savefig = 1
 Fit_B_sigma = 3
 Tthresh = 0.1
 statistics = 1
-NBINS = 200
+NBINS = 80
 
 fname_ideal = 'vx_muSR_spectrum_ideal.pdf'
 dt_up_ideal, dt_down_ideal = muSR_spectrum_Ideal(arr)
-fit_plot_spectrum(dt_up_ideal, dt_down_ideal, Tthresh, TGATE, fname_ideal, Fit_B_sigma, savefig)
+fit_plot_spectrum(dt_up_ideal, dt_down_ideal, Tthresh, TGATE, fname_ideal, Fit_B_sigma, NBINS, savefig)
     
 
 fname_sel='vx_muSR_spectrum_simulation.pdf'
 dt_up_sel, dt_down_sel, mask_rec_up, mask_rec_down = muSR_spectrum(arr, DMATCH, Detector_IDs, PIDs, TARGET_ID, TGATE, Z_TARGET)
-fit_plot_spectrum(dt_up_sel, dt_down_sel, Tthresh, TGATE, fname_sel, Fit_B_sigma, savefig)
+fit_plot_spectrum(dt_up_sel, dt_down_sel, Tthresh, TGATE, fname_sel, Fit_B_sigma, NBINS, savefig)
 
 #=================================
 #=================================
