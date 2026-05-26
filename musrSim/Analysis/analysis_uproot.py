@@ -187,7 +187,7 @@ def Generate_XY_std_decay_inTarget():
     with open('../data/XY_std_decay_Target.dat', 'w') as ff:
         ff.write('# d, std(X), std(Y)\n')
         for dd in d:
-            with uproot.open(f"data/musr_d{int(dd)}mm_B0_0mT_N1e5.root")["t1"] as tree:
+            with uproot.open(f"../data/musr_d{int(dd)}mm_B0_0mT_N1e5.root")["t1"] as tree:
                 arr = tree.arrays(branches, library="ak")
             hit_Target = (arr["muDecayDetID"] == TARGET_ID)
             dec_targ_mu_X = ak.to_numpy((arr["muDecayPosX"][hit_Target]))
@@ -195,7 +195,7 @@ def Generate_XY_std_decay_inTarget():
             ff.write(f'{dd:.2f},{dec_targ_mu_X.std():.2f},{dec_targ_mu_Y.std():.2f}\n')
 
 def Plot_XY_std_decay_inTarget(savefig=False):
-    XY_data = np.loadtxt('data/XY_std_decay_Target.dat', delimiter=',')
+    XY_data = np.loadtxt('../data/XY_std_decay_Target.dat', delimiter=',')
     xd = np.linspace(0,45,100)
     p_std_x = np.polyfit(XY_data[:,0],XY_data[:,1], 1)
     p_std_y = np.polyfit(XY_data[:,0],XY_data[:,2], 1)
@@ -207,12 +207,13 @@ def Plot_XY_std_decay_inTarget(savefig=False):
     ax.plot(xd,fit_std_x(xd),'-k',lw=1,label=r'fit $\sigma(X)=%.3f d +%.2f$'%(p_std_x[0],p_std_x[1]))
     ax.plot(xd,fit_std_y(xd),'--r',lw=1,label=r'fit $\sigma(Y)=%.3f d +%.2f$'%(p_std_y[0],p_std_y[1]))
     ax.set_xlabel(r"$d \; \mathrm{[mm]}$")
-    ax.set_ylabel(r"Trasverse Spread of Stoped $\mu^+\; \mathrm{[mm]}$")
+    ax.set_ylabel(r"Transverse spread of stopped $\mu^+\; \mathrm{[mm]}$")
     ax.set_xlim(0, 45)
     ax.set_ylim(1.5, 3)
     ax.legend(loc=0)
     if savefig:
         fig.savefig('../plots/SIMULATION_1/Muon_Decay_Target_Transverse_Spread.pdf')
+    plt.show()
 
 
 # ============================================================
@@ -264,7 +265,7 @@ with uproot.open(f"../data/musr_d{int(dd)}mm_B0_0mT_N1e5.root")["t1"] as tree:
 
 # Generate_XY_std_decay_inTarget()
 
-# Plot_XY_std_decay_inTarget(savefig=0)
+#Plot_XY_std_decay_inTarget(savefig=0)
 
 #==============================================
 
