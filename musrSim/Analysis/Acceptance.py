@@ -253,40 +253,90 @@ d = [5.,10.,15.,20.,25.,30.,35.,40.]
 ######################################################################################################
 ######################################################################################################
 
-data = np.loadtxt('../data/acceptance1.dat', delimiter=',')
-#print(data)
+#data = np.loadtxt('../data/acceptance1.dat', delimiter=',')
+##print(data)
 
-d         = data[:,0]
-N_events  = data[:,1]
-N_target  = data[:,2]
-A_mu_L1L2 = data[:,3]
-A_ep_L3   = data[:,4]
-A_ep_L4   = data[:,5]
-A_ep_L3L4 = data[:,6]
+#d         = data[:,0]
+#N_events  = data[:,1]
+#N_target  = data[:,2]
+#A_mu_L1L2 = data[:,3]
+#A_ep_L3   = data[:,4]
+#A_ep_L4   = data[:,5]
+#A_ep_L3L4 = data[:,6]
+
+#figsave = 1
+
+#fig,ax = plotting_header()
+##ax.plot(d, 100*N_target/N_events, '-k', ms=3)
+#ax.plot(d, A_mu_L1L2, '-m', label=r'$\mu^+$ track L1&L2')
+#ax.plot(d, A_ep_L3, '-^c', ms=3, label=r'$e^+$ hit L3')
+#ax.plot(d, A_ep_L4, '-vr', ms=3, label=r'$e^+$ hit L4')
+#ax.plot(d, A_ep_L3L4, '--k', label=r'$e^+$ track L3&L4')
+#ax.set_xlabel(r"$d \; \mathrm{[mm]}$")
+#ax.set_ylabel("Geometrical Acceptance [%]")
+#ax.set_xlim(5, 40)
+#ax.set_ylim(0,101)
+#ax.legend(loc=0)
+#if figsave:
+#    fig.savefig(f"../plots/SIMULATION_1/Acceptance_vs_d.pdf")
+
+#plt.show()
+
+##fig1,ax1 = plotting_header()
+##ax1.plot(d, A_ep_L3, '-^c', ms=3)
+##ax1.plot(d, A_ep_L4, '-vc', ms=5)
+##ax1.plot(d, A_ep_L3L4, '--r', ms=3)
+##plt.show()
+
+
+
+######################################################################################################
+######################################################################################################
 
 figsave = 1
 
-fig,ax = plotting_header()
-#ax.plot(d, 100*N_target/N_events, '-k', ms=3)
-ax.plot(d, A_mu_L1L2, '-m', label=r'$\mu^+$ track L1&L2')
-ax.plot(d, A_ep_L3, '-^c', ms=3, label=r'$e^+$ hit L3')
-ax.plot(d, A_ep_L4, '-vr', ms=3, label=r'$e^+$ hit L4')
-ax.plot(d, A_ep_L3L4, '--k', label=r'$e^+$ track L3&L4')
-ax.set_xlabel(r"$d \; \mathrm{[mm]}$")
-ax.set_ylabel("Geometrical Acceptance [%]")
-ax.set_xlim(5, 40)
-ax.set_ylim(0,101)
-ax.legend(loc=0)
-if figsave:
-    fig.savefig(f"../plots/SIMULATION_1/Acceptance_vs_d.pdf")
+dataA = np.loadtxt('../data/acceptance1.dat', delimiter=',')
+d         = dataA[:,0]
+#N_events  = dataA[:,1]
+#N_target  = dataA[:,2]
+#A_mu_L1L2 = dataA[:,3]
+#A_ep_L3   = dataA[:,4]
+#A_ep_L4   = dataA[:,5]
+A_ep_L3L4 = dataA[:,6]
+#---------------------------
+dataD = np.loadtxt('../data/deltas.dat',dtype=float, delimiter=',')
+#d = data[:,0]
+dmu_mean, dmu_std = dataD[:,1], dataD[:,2]
+#dep_mean, dep_std = dataD[:,3], dataD[:,4]
 
+FoM = A_ep_L3L4/dmu_std/dmu_std
+
+
+fig,ax = plotting_header()
+ax.plot(A_ep_L3L4, dmu_std, '-ok', ms=3)
+ax.set_xlabel(r"$A_{e^+,\mathrm{L3L4}}$ [%]")
+ax.set_ylabel(r"$\sigma(\delta_\mu) \; \mathrm{[mm]}$")
+ax.set_xlim(6, 15)
+ax.set_ylim(0.1,1)
+if figsave:
+    fig.savefig(f"../plots/SIMULATION_1/Sigma_mu_vs_Acceptance_pos.pdf")
 plt.show()
 
-#fig1,ax1 = plotting_header()
-#ax1.plot(d, A_ep_L3, '-^c', ms=3)
-#ax1.plot(d, A_ep_L4, '-vc', ms=5)
-#ax1.plot(d, A_ep_L3L4, '--r', ms=3)
-#plt.show()
+
+fig1,ax1 = plotting_header()
+ax1.plot(d, FoM/100, '-ok', ms=3)
+ax1.set_xlabel(r"$d\; \mathrm{[mm]}$")
+ax1.set_ylabel("FoM")
+ax1.set_xlim(5, 40)
+ax1.set_ylim(0,9)
+if figsave:
+    fig1.savefig(f"../plots/SIMULATION_1/FoM_vs_d.pdf")
+plt.show()
+
+
+
+
+
 
 
 

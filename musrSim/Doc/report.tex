@@ -15,7 +15,7 @@
 \sisetup{separate-uncertainty=true, per-mode=symbol}
 
 \title{Simulation of Si-Pixel vx-$\mu$SR using musrSim}
-\author{--}
+\author{Ervin Kafexhiu}
 \date{\today}
 
 \begin{document}
@@ -261,9 +261,11 @@ The standard deviation $\sigma(\delta_\mu)$ is used as the main estimate of the 
 \includegraphics[width=\textwidth]{../plots/SIMULATION_1/Std_deltas.pdf}
 \caption{Residual width.}
 \end{subfigure}
-
 \caption{Mean and standard deviation of the reconstruction residuals as functions of the inner-layer distance $d$. The width $\sigma(\delta_\mu)$ is used as the main estimate of the muon vertex-reconstruction uncertainty. \label{fig:delta_mean_std} }
 \end{figure}
+
+
+As an additional diagnostic, the correlation between the muon reconstruction width $\sigma(\delta_\mu)$ and the downstream positron-track acceptance $A_{e^+,\mathrm{L3L4}}$ was also examined. This plot is shown in the appendix Fig.~\ref{fig:sigma_vs_acceptance}. It makes explicit the same trend already visible in Figs.~\ref{fig:geometrical_accept} and \ref{fig:delta_mean_std}: within the present simplified geometry, smaller inner-layer spacing improves both the muon vertex-resolution metric and the usable downstream positron-track acceptance.
 
 
 %\clearpage
@@ -304,7 +306,6 @@ Two spectra are constructed. The first is a truth-level spectrum, where the muon
 $$ d_{\mathrm{match}} \leq \SI{1}{mm}, $$
 
 and the reconstructed time difference lies inside the analysis window,
-begginer
 $$ 0 < \Delta t < \SI{13}{\micro s}. $$
 
 The reconstructed time differences are defined as
@@ -362,19 +363,25 @@ $\phi\;{\rm [rad]}$   & -1.596 & 1.490 \\
 
 \begin{table}[hbt]
 \centering
-\caption{Summary of geometrical acceptance for detector configuration for transverse-field vx-$\mu$SR.}
+\caption{Summary of geometrical acceptance for the detector configuration for the transverse-field vx-$\mu$SR.}
 \label{tab:sim2_accept}
 \begin{tabular}{lrl}
 \toprule
 Parameter & Value & Comment\\
 \midrule
-Muon L1--L2 track acceptance &  99.13~\% &  $N_\mathrm{\mu-tracks}/N_\mathrm{events}$\\
-Muon target-stop fraction & 67.50~\% & $N_\mathrm{\mu\,stop\,target}/N_\mathrm{events}$\\
-Target-stop fraction after muon-track selection & 68.09~\% & $N_\mathrm{\mu\,stop\,target}/N_\mathrm{\mu-tracks}$ \\
-Upstream $e^+$ track acceptance & 9.70~\% & $N_\mathrm{e-tracks}^\mathrm{up}/N_\mathrm{\mu\,stop\,target}$ \\
-Downstream $e^+$ track acceptance & 10.41~\% & $N_\mathrm{e-tracks}^\mathrm{down}/N_\mathrm{\mu-stop\,target}$ \\
-Accepted upstream vx-$\mu$SR events & 75.33~\% &  $N^\mathrm{vx}_\mathrm{up}/N_\mathrm{e-tracks}^\mathrm{up}$ \\ 
-Accepted downstream vx-$\mu$SR events & 74.07~\% & $N^\mathrm{vx}_\mathrm{down}/N_\mathrm{e-tracks}^\mathrm{down}$ \\
+Muon L1--L2 track acceptance &  99.1~\% &  $\frac{N_\mathrm{\mu\,tracks}}{N_\mathrm{events}}$\\
+ & & \\
+Muon target-stop fraction & 67.5~\% & $\frac{N_\mathrm{\mu\,stop\,target}}{N_\mathrm{events}}$\\
+ & & \\
+Target-stop fraction after muon-track selection & 68.1~\% & $\frac{N_\mathrm{\mu\,stop\,target}}{N_\mathrm{\mu\,tracks}}$ \\
+ & & \\
+Upstream $e^+$ track acceptance & 9.7~\% & $\frac{N_\mathrm{e\,tracks}^\mathrm{up}}{N_\mathrm{\mu\,stop\,target}}$ \\
+ & & \\
+Downstream $e^+$ track acceptance & 10.4~\% & $\frac{N_\mathrm{e\,tracks}^\mathrm{down}}{N_\mathrm{\mu-stop\,target}}$ \\
+ & & \\
+Accepted upstream vx-$\mu$SR events & 75.3~\% &  $\frac{N^\mathrm{vx}_\mathrm{up}}{N_\mathrm{e\,tracks}^\mathrm{up}}$ \\
+ & & \\ 
+Accepted downstream vx-$\mu$SR events & 74.1~\% & $\frac{N^\mathrm{vx}_\mathrm{down}}{N_\mathrm{e\,tracks}^\mathrm{down}}$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -382,6 +389,34 @@ Accepted downstream vx-$\mu$SR events & 74.07~\% & $N^\mathrm{vx}_\mathrm{down}/
 %\clearpage
 
 \FloatBarrier
+
+\section{Comments on the comparison with Mandok et al.}
+
+Several features of the simplified simulation reproduce the qualitative trends reported by Mandok et al. First, the muon reconstruction width $\sigma(\delta_\mu)$ increases approximately linearly with the inner-layer distance $d$, as shown in Fig.~\ref{fig:delta_mean_std}. Second, the simulated energy-deposition distributions in the first upstream layer show the expected separation between the $\mu^+$ and $e^+$ components. Third, the transverse-field vx-$\mu$SR simulation gives a precession frequency consistent with the imposed magnetic field. From the reconstructed fits,
+$$
+f_{\mathrm{up}}=\frac{\omega_{\mathrm{up}}}{2\pi} \simeq \SI{0.855}{MHz}, \qquad f_{\mathrm{down}}=\frac{\omega_{\mathrm{down}}}{2\pi} \simeq \SI{0.856}{MHz},
+$$
+
+\noindent in agreement with the expected value of about $\SI{0.85}{MHz}$ for $B=\SI{6.3}{mT}$.
+
+The fitted phases also provide a useful consistency check. For the reconstructed spectrum, the fitted phases are
+$$\phi_{\mathrm{up}}=-1.596~\mathrm{rad}, \qquad \phi_{\mathrm{down}}=1.490~\mathrm{rad}.$$
+
+\noindent These values are close to $-\pi/2$ and $+\pi/2$, respectively. This is the expected relative phase for two detector groups placed on opposite sides of the target along the $z$-direction, with the initial muon spin along $+x$ and the magnetic field along $+y$. The fitted phase difference is therefore consistent with the intended transverse-field geometry.
+
+Some quantitative differences remain. In particular, the dependence of $\sigma(\delta_\mu)$ on $d$ is less steep in the present simulation than in Mandok et al. The fitted slope obtained here is approximately $0.023$,
+$$ \sigma(\delta_\mu) = 0.023\, d+0.04. $$
+
+\noindent The trend extracted from Mandok et al., on the other hand, is closer to $0.03$. Differences of this level are expected, given that the present geometry is deliberately simplified. However, this difference in slope should nevertheless be treated as a useful diagnostic of the model introduced here. 
+
+A second feature worth noting is the suppression of the reconstructed downstream spectrum near $t=0$ in Fig.~\ref{fig:vxmusr_spectrum}. Since this feature is less evident in the truth-level spectrum (see Fig.~\ref{fig:vxmusr_spectrum_ideal}), it is likely connected to the reconstruction or matching procedure rather than to the imposed spin precession itself. Possible causes include early-time positron--muon hit overlap, time-ordering cuts, the $d_{\mathrm{match}}\leq\SI{1}{mm}$ requirement, acceptance differences between upstream and downstream tracklets, or the use of average detector-hit times to define $t^{\mathrm{rec}}_\mu$ and $t^{\mathrm{rec}}_{e^+}$. This should be checked by comparing the spectrum before and after each reconstruction cut.
+
+For this first reconstruction test, the spectra were fitted with the minimal transverse-field equation
+$$ N(t)=N_0 e^{-t/\tau_\mu} \left[1+A\cos(\omega t+\phi)\right], $$
+
+\noindent rather than with an extended model including Gaussian damping and a constant background. This choice was deliberate: the present simulation uses an idealized target, a uniform magnetic field, and no explicit detector noise or accidental background. Additional damping or background terms may improve the phenomenological fit, but in this simplified setup they would mainly absorb acceptance, matching, binning, and finite-statistics effects rather than represent independently modelled material relaxation or detector background.
+
+
 \section{Current Simplifications}
 
 The present model keeps only the ingredients needed for a first reconstruction
@@ -395,16 +430,6 @@ field applied to the target region.
 Despite these simplifications, the simulations provide a compact validation chain: first, the geometrical track-reconstruction residual is quantified as a function of detector spacing; second, the same simplified geometry is used to recover a transverse-field vx-$\mu$SR oscillation from matched muon and positron tracklets.
 
 
-\section{Comments on the comparison with Mandok et al.}
-
-Many results obtained in this simplified study validate those shown in the Mandok et al.
-For instance, the linear dependence of $\sigma(\delta_\mu)$ from $d$, energy deposition in the first layer L1 of $\mu^+$ and $e^+$, the oscillation frequency of vx-$\mu$SR spectrum was quoted $f=0.85$~MHz and here is $f=\frac{\omega}{2\pi}=0.855$~MHz upstream or 0.856~MHz downstream. 
-
-There are also some disagreements, that may be worth noting. First, regarding the dependence of the $\sigma(\delta_\mu)$ as a function of $d$, see Fig.~\ref{fig:delta_mean_std}. Mandok et al. results have a steeper line in comparison to the results obtained here this is also reflected on the line gradient that for Mandok et al. is quoted $\sim 0.03$ while here is $\sim 0.023$. I wonder if the origin of this slight disagreement is anything alse then just statistics, and if it can be used to debug any potential error that might have been done here.
-
-Second the vx-$\mu$SR spectrum near the lowest time in downstream, the $N(t)$ is smaller then it should be.
-
-
 %\clearpage
 \FloatBarrier
 
@@ -412,24 +437,7 @@ Second the vx-$\mu$SR spectrum near the lowest time in downstream, the $N(t)$ is
 \section{Appendix: Sanity Checks and Supplementary Plots}
 
 \subsection{Simulation 1}
-This appendix collects diagnostic plots used to validate the target stopping distribution (Fig.~\ref{fig:target_decay}), energy deposition (Fig.~\ref{fig:L1_edep}), and residual distributions for selected detector spacings (Fig.~\ref{fig:delta_distribution}).
-
-\begin{figure}[hbt]
-\centering
-\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d10mm.pdf}
-\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d20mm.pdf}
-\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d30mm.pdf}
-\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d40mm.pdf}
-\caption{Distribution of $\delta_\mu$ (red) and $\delta_e$ (black) for different distances $d$. \label{fig:delta_distribution}}
-\end{figure}
-
-
-
-\begin{figure}[hbt]
-\centering
-\includegraphics[scale=1]{../plots/SIMULATION_1/Energy_Deposit_L1.pdf}
-\caption{Energy deposit from muons and positrons in the first $L1$ upstream layer. \label{fig:L1_edep}}
-\end{figure}
+This appendix collects diagnostic plots used to validate the target stopping distribution (Fig.~\ref{fig:target_decay} and Fig.~\ref{fig:trasnverse_beam_target}), energy deposition (Fig.~\ref{fig:L1_edep}), and residual distributions for selected detector spacings (Fig.~\ref{fig:delta_distribution}). Figure~\ref{fig:sigma_vs_acceptance} shows the relation between the muon reconstruction width and the downstream positron-track acceptance. This is not used as an independent optimization criterion, but as a compact diagnostic of the trade-off between vertex resolution and usable positron statistics.
 
 \begin{figure}[hbt]
 \centering
@@ -441,6 +449,12 @@ This appendix collects diagnostic plots used to validate the target stopping dis
 
 \begin{figure}[hbt]
 \centering
+\includegraphics[scale=1]{../plots/SIMULATION_1/Energy_Deposit_L1.pdf}
+\caption{Energy deposit from muons and positrons in the first $L1$ upstream layer. \label{fig:L1_edep}}
+\end{figure}
+
+\begin{figure}[hbt]
+\centering
 \includegraphics[scale=0.95]{../plots/SIMULATION_1/2d_XY_Decay/2d_XY_target_decay_d=5mm.pdf}
 \includegraphics[scale=0.95]{../plots/SIMULATION_1/2d_XY_Decay/2d_XY_target_decay_d=20mm.pdf}
 \includegraphics[scale=0.95]{../plots/SIMULATION_1/2d_XY_Decay/2d_XY_target_decay_d=40mm.pdf}
@@ -448,10 +462,28 @@ This appendix collects diagnostic plots used to validate the target stopping dis
 \caption{Transverse distribution of stopped muons in the target for selected inner-layer distances $d$. The lower-right panel shows the standard deviation of the stopped-muon transverse distribution as a function of $d$. This plot is used as a stopping-distribution sanity check, not as the primary reconstruction residual. \label{fig:trasnverse_beam_target}}
 \end{figure}
 
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d10mm.pdf}
+\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d20mm.pdf}
+\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d30mm.pdf}
+\includegraphics[scale=0.95]{../plots/SIMULATION_1/delta_mu_e/delta_d40mm.pdf}
+\caption{Distribution of $\delta_\mu$ (red) and $\delta_e$ (black) for different distances $d$. \label{fig:delta_distribution}}
+\end{figure}
+
+
+\begin{figure}[hbt]
+\centering
+\includegraphics[scale=1.1]{../plots/SIMULATION_1/Sigma_mu_vs_Acceptance_pos.pdf}
+\caption{Correlation between the muon reconstruction width $\sigma(\delta_\mu)$ and the downstream positron-track acceptance $A_{e^+,\mathrm{L3L4}}$. Each point corresponds to one inner-layer spacing $d$. In the simplified geometry studied here, smaller $d$ gives both smaller muon residual width and larger downstream positron-track acceptance. \label{fig:sigma_vs_acceptance}}
+\end{figure}
+
+
 \clearpage
 
 \subsection{Simulation 2}
-This appendix shows the truth-level transverse-field spectrum used as a sanity check before applying the full reconstruction and matching procedure (see Fig.~\ref{fig:vxmusr_spectrum_ideal}).
+This appendix shows the truth-level transverse-field spectrum used as a sanity check before applying the full reconstruction and matching procedure (see Fig.~\ref{fig:vxmusr_spectrum}).
 
 \begin{table}[hbt]
 \centering
